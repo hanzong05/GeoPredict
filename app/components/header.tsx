@@ -1,21 +1,27 @@
-'use client';
+"use client";
 
-import { Waves, MapPin, Search } from 'lucide-react';
-import { useState, useEffect, useRef } from 'react';
-import { createPortal } from 'react-dom';
+import { Waves, MapPin, Search } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
+import { predictByLocation } from "@/lib/actions/liquefaction";
 
 interface HeaderProps {
   onLocationSubmit?: (lat: number, lng: number) => void;
+  onPredictionResult?: (data: any) => void; // ← ADD THIS PROP
 }
 
-const Header = ({ onLocationSubmit }: HeaderProps) => {
-  const [latitude, setLatitude] = useState('');
-  const [longitude, setLongitude] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
+const Header = ({ onLocationSubmit, onPredictionResult }: HeaderProps) => {
+  const [latitude, setLatitude] = useState("");
+  const [longitude, setLongitude] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [showResults, setShowResults] = useState(false);
-  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0 });
+  const [dropdownPosition, setDropdownPosition] = useState({
+    top: 0,
+    left: 0,
+    width: 0,
+  });
   const searchInputRef = useRef<HTMLDivElement>(null);
   const [mounted, setMounted] = useState(false);
 
@@ -29,24 +35,48 @@ const Header = ({ onLocationSubmit }: HeaderProps) => {
       setDropdownPosition({
         top: rect.bottom + window.scrollY,
         left: rect.left + window.scrollX,
-        width: rect.width
+        width: rect.width,
       });
     }
   }, [showResults, searchQuery]);
+
+  // ============================================================================
+  // NEW: Prediction function
+  // ============================================================================
+  const handlePrediction = async (lat: number, lng: number) => {
+    setIsLoading(true);
+    try {
+      const result = await predictByLocation(lat, lng);
+
+      if (result.success && result.data) {
+        // Pass prediction result to parent component
+        if (onPredictionResult) {
+          onPredictionResult(result.data);
+        }
+
+        // Also notify parent about location change
+        if (onLocationSubmit) {
+          await onLocationSubmit(lat, lng);
+        }
+      } else {
+        alert(`Prediction failed: ${result.error}`);
+      }
+    } catch (error) {
+      console.error("Prediction error:", error);
+      alert("Failed to get prediction");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  // ============================================================================
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const lat = parseFloat(latitude);
     const lng = parseFloat(longitude);
 
-    if (!isNaN(lat) && !isNaN(lng) && onLocationSubmit) {
-      setIsLoading(true);
-      try {
-        await onLocationSubmit(lat, lng);
-        // Keep the values in the fields - don't clear them
-      } finally {
-        setIsLoading(false);
-      }
+    if (!isNaN(lat) && !isNaN(lng)) {
+      await handlePrediction(lat, lng); // ← CHANGED: Now calls prediction
     }
   };
 
@@ -55,29 +85,26 @@ const Header = ({ onLocationSubmit }: HeaderProps) => {
       setIsLoading(true);
       navigator.geolocation.getCurrentPosition(
         async (position) => {
-          try {
-            const lat = position.coords.latitude;
-            const lng = position.coords.longitude;
+          const lat = position.coords.latitude;
+          const lng = position.coords.longitude;
 
-            // Fill the lat/long fields with 4 decimal places
-            setLatitude(lat.toFixed(4));
-            setLongitude(lng.toFixed(4));
+          // Fill the lat/long fields with 4 decimal places
+          setLatitude(lat.toFixed(4));
+          setLongitude(lng.toFixed(4));
 
-            if (onLocationSubmit) {
-              await onLocationSubmit(lat, lng);
-            }
-          } finally {
-            setIsLoading(false);
-          }
+          // Get prediction
+          await handlePrediction(lat, lng); // ← CHANGED: Now calls prediction
         },
         (error) => {
-          console.error('Error getting location:', error);
-          alert('Unable to get your location. Please check your browser permissions.');
+          console.error("Error getting location:", error);
+          alert(
+            "Unable to get your location. Please check your browser permissions.",
+          );
           setIsLoading(false);
-        }
+        },
       );
     } else {
-      alert('Geolocation is not supported by your browser.');
+      alert("Geolocation is not supported by your browser.");
     }
   };
 
@@ -90,13 +117,13 @@ const Header = ({ onLocationSubmit }: HeaderProps) => {
 
     try {
       const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5`
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5`,
       );
       const data = await response.json();
       setSearchResults(data);
       setShowResults(true);
     } catch (error) {
-      console.error('Error searching location:', error);
+      console.error("Error searching location:", error);
       setSearchResults([]);
     }
   };
@@ -107,11 +134,11 @@ const Header = ({ onLocationSubmit }: HeaderProps) => {
     handleSearch(value);
   };
 
-  const handleSelectResult = (result: any) => {
+  const handleSelectResult = async (result: any) => {
     // Hide dropdown immediately
     setShowResults(false);
     setSearchResults([]);
-    setSearchQuery('');
+    setSearchQuery("");
 
     // Fill lat/long inputs with 4 decimal places
     const lat = parseFloat(result.lat);
@@ -119,10 +146,8 @@ const Header = ({ onLocationSubmit }: HeaderProps) => {
     setLatitude(lat.toFixed(4));
     setLongitude(lng.toFixed(4));
 
-    // Submit location
-    if (onLocationSubmit) {
-      onLocationSubmit(lat, lng);
-    }
+    // Get prediction
+    await handlePrediction(lat, lng); // ← CHANGED: Now calls prediction
   };
 
   return (
@@ -149,7 +174,10 @@ const Header = ({ onLocationSubmit }: HeaderProps) => {
             {/* Search Input */}
             <div className="relative" ref={searchInputRef}>
               <div className="relative">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={14} />
+                <Search
+                  className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+                  size={14}
+                />
                 <input
                   type="text"
                   placeholder="Search location..."
@@ -161,35 +189,43 @@ const Header = ({ onLocationSubmit }: HeaderProps) => {
               </div>
 
               {/* Search Results Dropdown - Using Portal */}
-              {mounted && showResults && searchResults.length > 0 && createPortal(
-                <div
-                  style={{
-                    position: 'fixed',
-                    top: `${dropdownPosition.top + 4}px`,
-                    left: `${dropdownPosition.left}px`,
-                    minWidth: '256px',
-                    width: '320px',
-                    zIndex: 99999
-                  }}
-                  className="bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto"
-                >
-                  {searchResults.map((result, index) => (
-                    <button
-                      key={index}
-                      onClick={() => handleSelectResult(result)}
-                      className="w-full text-left px-3 py-2 hover:bg-slate-100 transition-colors border-b border-gray-100 last:border-b-0"
-                    >
-                      <div className="text-xs font-medium text-slate-900 break-words">{result.display_name}</div>
-                    </button>
-                  ))}
-                </div>,
-                document.body
-              )}
+              {mounted &&
+                showResults &&
+                searchResults.length > 0 &&
+                createPortal(
+                  <div
+                    style={{
+                      position: "fixed",
+                      top: `${dropdownPosition.top + 4}px`,
+                      left: `${dropdownPosition.left}px`,
+                      minWidth: "256px",
+                      width: "320px",
+                      zIndex: 99999,
+                    }}
+                    className="bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto"
+                  >
+                    {searchResults.map((result, index) => (
+                      <button
+                        key={index}
+                        onClick={() => handleSelectResult(result)}
+                        className="w-full text-left px-3 py-2 hover:bg-slate-100 transition-colors border-b border-gray-100 last:border-b-0"
+                      >
+                        <div className="text-xs font-medium text-slate-900 break-words">
+                          {result.display_name}
+                        </div>
+                      </button>
+                    ))}
+                  </div>,
+                  document.body,
+                )}
             </div>
 
             <div className="hidden lg:block w-px h-8 bg-gray-300"></div>
 
-            <form onSubmit={handleSubmit} className="flex items-center gap-2 flex-1 sm:flex-initial">
+            <form
+              onSubmit={handleSubmit}
+              className="flex items-center gap-2 flex-1 sm:flex-initial"
+            >
               <input
                 type="text"
                 placeholder="Latitude"
@@ -211,7 +247,7 @@ const Header = ({ onLocationSubmit }: HeaderProps) => {
                 disabled={isLoading}
                 className="px-2 md:px-3 py-1.5 bg-slate-900 text-white text-xs font-medium rounded-md hover:bg-slate-800 transition-colors disabled:bg-slate-400 disabled:cursor-not-allowed"
               >
-                {isLoading ? 'Loading...' : 'Go'}
+                {isLoading ? "Loading..." : "Go"}
               </button>
             </form>
 
@@ -223,8 +259,12 @@ const Header = ({ onLocationSubmit }: HeaderProps) => {
               className="flex items-center gap-1.5 md:gap-2 px-2 md:px-3 py-1.5 bg-emerald-600 text-white text-xs font-medium rounded-md hover:bg-emerald-700 transition-colors disabled:bg-emerald-400 disabled:cursor-not-allowed whitespace-nowrap"
             >
               <MapPin size={14} />
-              <span className="hidden sm:inline">{isLoading ? 'Loading...' : 'Use My Location'}</span>
-              <span className="sm:hidden">{isLoading ? 'Loading...' : 'My Location'}</span>
+              <span className="hidden sm:inline">
+                {isLoading ? "Loading..." : "Use My Location"}
+              </span>
+              <span className="sm:hidden">
+                {isLoading ? "Loading..." : "My Location"}
+              </span>
             </button>
 
             <div className="hidden lg:block w-px h-8 bg-gray-300"></div>
@@ -232,7 +272,9 @@ const Header = ({ onLocationSubmit }: HeaderProps) => {
             {/* Status Indicator */}
             <div className="hidden lg:flex items-center gap-2">
               <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
-              <span className="text-xs font-medium text-slate-600">System Active</span>
+              <span className="text-xs font-medium text-slate-600">
+                System Active
+              </span>
             </div>
           </div>
         </div>
