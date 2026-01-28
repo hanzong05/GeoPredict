@@ -369,7 +369,7 @@ Generated: ${new Date().toLocaleString()}`;
       {/* Action Buttons */}
       <div className="mx-3 md:mx-4 mb-4 md:mb-6 space-y-2 md:space-y-3">
         <button
-          onClick={onToggleComparison}
+          onClick={() => onToggleComparison?.()}
           className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-5 rounded-lg flex items-center justify-center gap-2.5 transition-all shadow-sm hover:shadow-md"
         >
           <IoGitCompare size={18} />

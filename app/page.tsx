@@ -125,9 +125,7 @@ export default function Page() {
         ) : (
           <LiquefactionSidebar
             location={location}
-            latitude={latitude}
-            longitude={longitude}
-            predictionData={predictionData} // ← Pass prediction data to sidebar
+            predictionData={predictionData}
             onToggleComparison={() => setShowComparison(true)}
           />
         )}
