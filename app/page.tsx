@@ -5,7 +5,7 @@ import Map from "./components/map";
 import Header from "./components/header";
 import LiquefactionSidebar from "./components/sidebar";
 import Comparison from "./components/comparison";
-
+import PredictingModal from "./components/modal";
 // ============================================================================
 // ADD: Type for prediction data
 // ============================================================================
@@ -45,6 +45,7 @@ export default function Page() {
   const [location, setLocation] = useState("Tarlac City");
   const [latitude, setLatitude] = useState(15.4754);
   const [longitude, setLongitude] = useState(120.5963);
+  const [isPredicting, setIsPredicting] = useState(false);
   const [externalLocation, setExternalLocation] = useState<{
     lat: number;
     lng: number;
@@ -114,7 +115,8 @@ export default function Page() {
     <div className="flex flex-col h-screen bg-white">
       <Header
         onLocationSubmit={handleManualLocationSubmit}
-        onPredictionResult={handlePredictionResult} // ← Pass prediction handler
+        onPredictionResult={handlePredictionResult}
+        onPredictingChange={setIsPredicting} // ← Pass prediction handler
       />
       <div className="flex flex-col md:flex-row flex-1 overflow-hidden">
         {showComparison ? (
@@ -133,10 +135,15 @@ export default function Page() {
           <Map
             onLocationChange={handleLocationChange}
             externalLocation={externalLocation}
-            onPredictionResult={handlePredictionResult} // ← Pass prediction handler
+            onPredictionResult={handlePredictionResult}
+            onPredictingChange={setIsPredicting}
           />
         </div>
       </div>
+      <PredictingModal
+        open={isPredicting}
+        message="Running soil liquefaction analysis…"
+      />
     </div>
   );
 }

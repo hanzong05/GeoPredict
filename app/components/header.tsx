@@ -8,9 +8,14 @@ import { predictByLocation } from "@/lib/actions/liquefaction";
 interface HeaderProps {
   onLocationSubmit?: (lat: number, lng: number) => void;
   onPredictionResult?: (data: any) => void; // ← ADD THIS PROP
+  onPredictingChange?: (loading: boolean) => void;
 }
 
-const Header = ({ onLocationSubmit, onPredictionResult }: HeaderProps) => {
+const Header = ({
+  onLocationSubmit,
+  onPredictionResult,
+  onPredictingChange,
+}: HeaderProps) => {
   const [latitude, setLatitude] = useState("");
   const [longitude, setLongitude] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
@@ -45,6 +50,7 @@ const Header = ({ onLocationSubmit, onPredictionResult }: HeaderProps) => {
   // ============================================================================
   const handlePrediction = async (lat: number, lng: number) => {
     setIsLoading(true);
+    onPredictingChange?.(true);
     try {
       const result = await predictByLocation(lat, lng);
 
@@ -66,17 +72,19 @@ const Header = ({ onLocationSubmit, onPredictionResult }: HeaderProps) => {
       alert("Failed to get prediction");
     } finally {
       setIsLoading(false);
+      onPredictingChange?.(false);
     }
   };
   // ============================================================================
 
+  // Call the prediction function when the location is submitted
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const lat = parseFloat(latitude);
     const lng = parseFloat(longitude);
 
     if (!isNaN(lat) && !isNaN(lng)) {
-      await handlePrediction(lat, lng); // ← CHANGED: Now calls prediction
+      await handlePrediction(lat, lng); // Calls prediction
     }
   };
 

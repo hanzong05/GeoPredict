@@ -1,7 +1,7 @@
 // lib/actions/liquefaction.ts
 'use server'
 
-const PYTHON_API_URL = process.env.PYTHON_SERVICE_URL || 'http://localhost:8000';
+const PYTHON_API_URL = (process.env.PYTHON_SERVICE_URL || 'http://localhost:8000').replace(/\.$/, '');
 
 
 export interface PredictionInput {
@@ -270,3 +270,12 @@ export async function getTrainingPipelineLogs(limit: number = 50) {
         };
     }
 }
+
+// Check backend health on initialization
+checkBackendHealth().then(result => {
+    if (result.success) {
+        console.log('Backend is healthy:', result.data);
+    } else {
+        console.error('Backend health check failed:', result.error);
+    }
+});
