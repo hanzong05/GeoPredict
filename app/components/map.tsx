@@ -82,13 +82,15 @@ const FlyToLocation = dynamic(
 interface MapProps {
   onLocationChange?: (lat: number, lng: number) => void;
   externalLocation?: { lat: number; lng: number } | null;
-  onPredictionResult?: (data: any) => void; // ← ADD THIS PROP
+  onPredictionResult?: (data: any) => void; // ← ADD THIS
+  onPredictingChange?: (loading: boolean) => void;
 }
 
 export default function Map({
   onLocationChange,
   externalLocation,
   onPredictionResult,
+  onPredictingChange,
 }: MapProps = {}) {
   const [loading, setLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
@@ -121,6 +123,7 @@ export default function Map({
 
                 // Make prediction when map is clicked
                 try {
+                  onPredictingChange?.(true); // ✅ SHOW MODAL
                   const result = await predictByLocation(
                     e.latlng.lat,
                     e.latlng.lng,
@@ -130,6 +133,8 @@ export default function Map({
                   }
                 } catch (error) {
                   console.error("Prediction error:", error);
+                } finally {
+                  onPredictingChange?.(false); // ✅ HIDE MODAL
                 }
               },
             });

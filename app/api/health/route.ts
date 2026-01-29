@@ -1,0 +1,32 @@
+import { NextResponse } from "next/server";
+import { supabase } from "@/lib/supabase";
+
+export async function GET() {
+    try {
+        const BUCKET_NAME = "geotechnical-data";
+
+        // Try listing 1 file to check connection
+        const { data, error } = await supabase.storage.from(BUCKET_NAME).list("", {
+            limit: 1,
+            offset: 0,
+        });
+
+        if (error) {
+            return NextResponse.json(
+                { success: false, message: "Supabase connection failed", error: error.message },
+                { status: 500 }
+            );
+        }
+
+        return NextResponse.json({
+            success: true,
+            message: "Supabase connection successful",
+            filesCount: data.length,
+        });
+    } catch (err: any) {
+        return NextResponse.json(
+            { success: false, message: err.message || "Supabase connection failed" },
+            { status: 500 }
+        );
+    }
+}
