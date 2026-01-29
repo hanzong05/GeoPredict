@@ -1,4 +1,3 @@
-// app/api/files/[folder]/route.ts
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 
@@ -6,10 +5,11 @@ const BUCKET_NAME = "geotechnical-data";
 
 export async function GET(
     request: Request,
-    { params }: { params: { folder: string } } // <-- remove Promise
+    context: { params: Promise<{ folder: string }> } // ✅ keep Promise for type
 ) {
     try {
-        const { folder: folderName } = params; // No need to await
+        // Await params because typing says it's a Promise
+        const { folder: folderName } = await context.params;
 
         console.log(`Fetching files from folder: ${folderName}`);
 
@@ -19,19 +19,17 @@ export async function GET(
 
         if (error) {
             console.error("Storage error:", error);
-            return NextResponse.json(
-                { error: error.message },
-                { status: 400 }
-            );
+            return NextResponse.json({ error: error.message }, { status: 400 });
         }
 
         const files = data
-            .filter(item =>
-                item.id &&
-                item.name !== ".emptyFolderPlaceholder" &&
-                !item.name.startsWith(".")
+            .filter(
+                (item) =>
+                    item.id &&
+                    item.name !== ".emptyFolderPlaceholder" &&
+                    !item.name.startsWith(".")
             )
-            .map(file => ({
+            .map((file) => ({
                 name: file.name,
                 metadata: file.metadata,
                 created_at: file.created_at,
