@@ -8,13 +8,20 @@ const BUCKET_NAME = "geotechnical-data";
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
+interface RouteContext {
+    params: Promise<{
+        folder: string;
+    }>;
+}
+
 export async function GET(
     request: Request,
-    context: { params: Promise<{ folder: string }> }
+    context: RouteContext
 ) {
     try {
-        // Await params because typing says it's a Promise
-        const { folder: folderName } = await context.params;
+        // Properly await params
+        const params = await context.params;
+        const folderName = params.folder;
 
         console.log(`Fetching files from folder: ${folderName}`);
 
