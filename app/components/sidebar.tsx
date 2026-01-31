@@ -3,8 +3,6 @@
 import React from "react";
 import {
   IoLocation,
-  IoClose,
-  IoWarning,
   IoFlask,
   IoTrendingDown,
   IoConstruct,

@@ -26,34 +26,31 @@ const Marker = dynamic(
   { ssr: false },
 );
 
-// ... (keep all your dynamic imports: ZoomToTarlac, LocationMarker, FlyToLocation)
-
 const ZoomToTarlac = dynamic(
   () =>
     import("react-leaflet").then((mod) => {
       const { useMap } = mod;
-      return {
-        default: () => {
-          const map = useMap();
-          useEffect(() => {
-            if (!map) return;
-            setTimeout(() => {
-              try {
-                map.setView([12.8797, 121.774], 6);
-                setTimeout(() => {
-                  map.flyTo([15.4754, 120.5963], 10, {
-                    duration: 2.5,
-                    easeLinearity: 0.25,
-                  });
-                }, 800);
-              } catch (error) {
-                console.error("Map initialization error:", error);
-              }
-            }, 100);
-          }, [map]);
-          return null;
-        },
-      };
+      function ZoomToTarlacComponent() {
+        const map = useMap();
+        useEffect(() => {
+          if (!map) return;
+          setTimeout(() => {
+            try {
+              map.setView([12.8797, 121.774], 6);
+              setTimeout(() => {
+                map.flyTo([15.4754, 120.5963], 10, {
+                  duration: 2.5,
+                  easeLinearity: 0.25,
+                });
+              }, 800);
+            } catch (error) {
+              console.error("Map initialization error:", error);
+            }
+          }, 100);
+        }, [map]);
+        return null;
+      }
+      return { default: ZoomToTarlacComponent };
     }),
   { ssr: false },
 );
@@ -62,27 +59,62 @@ const FlyToLocation = dynamic(
   () =>
     import("react-leaflet").then((mod) => {
       const { useMap } = mod;
-      return {
-        default: ({ position }: { position: [number, number] | null }) => {
-          const map = useMap();
-          useEffect(() => {
-            if (position && map) {
-              map.flyTo(position, 13, {
-                duration: 1.5,
-              });
-            }
-          }, [position, map]);
-          return null;
-        },
-      };
+      function FlyToLocationComponent({
+        position,
+      }: {
+        position: [number, number] | null;
+      }) {
+        const map = useMap();
+        useEffect(() => {
+          if (position && map) {
+            map.flyTo(position, 13, {
+              duration: 1.5,
+            });
+          }
+        }, [position, map]);
+        return null;
+      }
+      return { default: FlyToLocationComponent };
     }),
   { ssr: false },
 );
 
+interface PredictionData {
+  location: {
+    latitude: number;
+    longitude: number;
+    nearest_borehole_distance_km?: number;
+  };
+  risk_assessment: {
+    risk_level: "LOW" | "MEDIUM" | "HIGH";
+    probability: number;
+    severity: string;
+  };
+  soil_parameters: {
+    spt_n60: number;
+    unit_weight: number;
+    csr: number;
+    crr: number;
+    gwl: number;
+    fines_percent: number;
+    source?: string;
+  };
+  settlement: {
+    predicted_cm: number;
+    severity: string;
+  };
+  bearing_capacity: {
+    pre_liquefaction_kpa: number;
+    post_liquefaction_kpa: number;
+    capacity_reduction_percent: number;
+  };
+  recommendations: string[];
+}
+
 interface MapProps {
   onLocationChange?: (lat: number, lng: number) => void;
   externalLocation?: { lat: number; lng: number } | null;
-  onPredictionResult?: (data: any) => void; // ← ADD THIS
+  onPredictionResult?: (data: PredictionData) => void;
   onPredictingChange?: (loading: boolean) => void;
 }
 
@@ -101,51 +133,47 @@ export default function Map({
     null,
   );
 
-  // ============================================================================
-  // NEW: Create LocationMarker component with prediction
-  // ============================================================================
+  // Create LocationMarker component with prediction
   const LocationMarker = dynamic(
     () =>
       import("react-leaflet").then((mod) => {
         const { useMapEvents } = mod;
-        return {
-          default: ({
-            position,
-            setPosition,
-          }: {
-            position: [number, number] | null;
-            setPosition: (pos: [number, number]) => void;
-          }) => {
-            useMapEvents({
-              async click(e) {
-                const pos: [number, number] = [e.latlng.lat, e.latlng.lng];
-                setPosition(pos);
+        function LocationMarkerComponent({
+          position,
+          setPosition,
+        }: {
+          position: [number, number] | null;
+          setPosition: (pos: [number, number]) => void;
+        }) {
+          useMapEvents({
+            async click(e) {
+              const pos: [number, number] = [e.latlng.lat, e.latlng.lng];
+              setPosition(pos);
 
-                // Make prediction when map is clicked
-                try {
-                  onPredictingChange?.(true); // ✅ SHOW MODAL
-                  const result = await predictByLocation(
-                    e.latlng.lat,
-                    e.latlng.lng,
-                  );
-                  if (result.success && result.data && onPredictionResult) {
-                    onPredictionResult(result.data);
-                  }
-                } catch (error) {
-                  console.error("Prediction error:", error);
-                } finally {
-                  onPredictingChange?.(false); // ✅ HIDE MODAL
+              // Make prediction when map is clicked
+              try {
+                onPredictingChange?.(true);
+                const result = await predictByLocation(
+                  e.latlng.lat,
+                  e.latlng.lng,
+                );
+                if (result.success && result.data && onPredictionResult) {
+                  onPredictionResult(result.data as PredictionData);
                 }
-              },
-            });
+              } catch (error) {
+                console.error("Prediction error:", error);
+              } finally {
+                onPredictingChange?.(false);
+              }
+            },
+          });
 
-            return position ? <Marker position={position} /> : null;
-          },
-        };
+          return position ? <Marker position={position} /> : null;
+        }
+        return { default: LocationMarkerComponent };
       }),
     { ssr: false },
   );
-  // ============================================================================
 
   const handlePositionChange = (pos: [number, number]) => {
     setMarkerPosition(pos);
@@ -172,6 +200,7 @@ export default function Map({
         document.head.appendChild(link);
       }
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       delete (L.Icon.Default.prototype as any)._getIconUrl;
       L.Icon.Default.mergeOptions({
         iconRetinaUrl:
