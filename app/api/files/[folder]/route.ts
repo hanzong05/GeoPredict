@@ -1,12 +1,10 @@
 // app/api/files/[folder]/route.ts
 import { NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase-server";
+import { createServerClient } from "@/lib/supabase-server";
 
 const BUCKET_NAME = "geotechnical-data";
 
-// Mark as dynamic to prevent build-time execution
 export const dynamic = 'force-dynamic';
-export const runtime = 'nodejs';
 
 interface RouteContext {
     params: Promise<{
@@ -19,7 +17,9 @@ export async function GET(
     context: RouteContext
 ) {
     try {
-        // Properly await params
+        // Create Supabase client inside the handler
+        const supabase = createServerClient();
+
         const params = await context.params;
         const folderName = params.folder;
 

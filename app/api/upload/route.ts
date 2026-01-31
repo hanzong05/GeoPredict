@@ -1,6 +1,6 @@
 // app/api/upload/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase-server";
+import { createServerClient } from "@/lib/supabase-server";
 
 const BUCKET_NAME = "geotechnical-data";
 const RAW_FOLDER = "raw";
@@ -10,10 +10,12 @@ const PYTHON_API_URL = process.env.PYTHON_SERVICE_URL || 'http://localhost:8000'
 
 // Mark as dynamic to prevent build-time execution
 export const dynamic = 'force-dynamic';
-export const runtime = 'nodejs';
 
 export async function POST(request: NextRequest) {
     try {
+        // Create Supabase client inside the handler
+        const supabase = createServerClient();
+
         const formData = await request.formData();
         const file = formData.get("file") as File;
 

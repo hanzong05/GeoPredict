@@ -1,15 +1,17 @@
 // app/api/folders/route.ts
 import { NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase-server";
+import { createServerClient } from "@/lib/supabase-server";
 
 const BUCKET_NAME = "geotechnical-data";
 
 // Mark as dynamic to prevent build-time execution
 export const dynamic = 'force-dynamic';
-export const runtime = 'nodejs';
 
 export async function GET() {
     try {
+        // Create Supabase client inside the handler
+        const supabase = createServerClient();
+
         // List everything in the bucket
         const { data, error } = await supabase.storage
             .from(BUCKET_NAME)
@@ -29,7 +31,8 @@ export async function GET() {
         const folders = data
             .filter(item => !item.id) // Folders don't have IDs in Supabase
             .map(folder => ({
-                name: folder.name
+                name: folder.name,
+                created_at: folder.created_at
             }));
 
         console.log("Folders found:", folders);

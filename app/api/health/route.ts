@@ -1,20 +1,24 @@
 // app/api/health/route.ts
 import { NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase-server";
+import { createServerClient } from "@/lib/supabase-server";
 
 // Mark as dynamic to prevent build-time execution
 export const dynamic = 'force-dynamic';
-export const runtime = 'nodejs';
 
 export async function GET() {
     try {
+        // Create Supabase client inside the handler
+        const supabase = createServerClient();
+
         const BUCKET_NAME = "geotechnical-data";
 
         // Try listing 1 file to check connection
-        const { data, error } = await supabase.storage.from(BUCKET_NAME).list("", {
-            limit: 1,
-            offset: 0,
-        });
+        const { data, error } = await supabase.storage
+            .from(BUCKET_NAME)
+            .list("", {
+                limit: 1,
+                offset: 0,
+            });
 
         if (error) {
             return NextResponse.json(
