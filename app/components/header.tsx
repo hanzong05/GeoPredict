@@ -5,9 +5,47 @@ import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { predictByLocation } from "@/lib/actions/liquefaction";
 
+interface PredictionData {
+  location: {
+    latitude: number;
+    longitude: number;
+    nearest_borehole_distance_km?: number;
+  };
+  risk_assessment: {
+    risk_level: "LOW" | "MEDIUM" | "HIGH";
+    probability: number;
+    severity: string;
+  };
+  soil_parameters: {
+    spt_n60: number;
+    unit_weight: number;
+    csr: number;
+    crr: number;
+    gwl: number;
+    fines_percent: number;
+    source?: string;
+  };
+  settlement: {
+    predicted_cm: number;
+    severity: string;
+  };
+  bearing_capacity: {
+    pre_liquefaction_kpa: number;
+    post_liquefaction_kpa: number;
+    capacity_reduction_percent: number;
+  };
+  recommendations: string[];
+}
+
+interface SearchResult {
+  lat: string;
+  lon: string;
+  display_name: string;
+}
+
 interface HeaderProps {
   onLocationSubmit?: (lat: number, lng: number) => void;
-  onPredictionResult?: (data: any) => void;
+  onPredictionResult?: (data: PredictionData) => void;
   onPredictingChange?: (loading: boolean) => void;
 }
 
@@ -20,7 +58,7 @@ const Header = ({
   const [longitude, setLongitude] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [showResults, setShowResults] = useState(false);
   const [dropdownPosition, setDropdownPosition] = useState({
     top: 0,
@@ -54,7 +92,7 @@ const Header = ({
 
       if (result.success && result.data) {
         if (onPredictionResult) {
-          onPredictionResult(result.data);
+          onPredictionResult(result.data as PredictionData);
         }
 
         if (onLocationSubmit) {
@@ -119,7 +157,7 @@ const Header = ({
       const response = await fetch(
         `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5`,
       );
-      const data = await response.json();
+      const data = (await response.json()) as SearchResult[];
       setSearchResults(data);
       setShowResults(true);
     } catch (error) {
@@ -134,7 +172,7 @@ const Header = ({
     handleSearch(value);
   };
 
-  const handleSelectResult = async (result: any) => {
+  const handleSelectResult = async (result: SearchResult) => {
     setShowResults(false);
     setSearchResults([]);
     setSearchQuery("");
