@@ -1,3 +1,4 @@
+// app/api/files/[folder]/route.ts
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 
@@ -5,7 +6,7 @@ const BUCKET_NAME = "geotechnical-data";
 
 export async function GET(
     request: Request,
-    context: { params: Promise<{ folder: string }> } // ✅ keep Promise for type
+    context: { params: Promise<{ folder: string }> }
 ) {
     try {
         // Await params because typing says it's a Promise
@@ -42,8 +43,9 @@ export async function GET(
             success: true,
             files,
         });
-    } catch (err: any) {
-        console.error("Error:", err);
-        return NextResponse.json({ error: err.message }, { status: 500 });
+    } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : "Unknown error";
+        console.error("Error:", errorMessage);
+        return NextResponse.json({ error: errorMessage }, { status: 500 });
     }
 }

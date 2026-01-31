@@ -35,10 +35,11 @@ export async function GET() {
             folders,
             rawData: data // For debugging
         });
-    } catch (err: any) {
-        console.error("Error:", err);
+    } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : "Unknown error";
+        console.error("Error:", errorMessage);
         return NextResponse.json(
-            { error: err.message },
+            { error: errorMessage },
             { status: 500 }
         );
     }

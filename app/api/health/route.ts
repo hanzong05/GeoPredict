@@ -1,3 +1,4 @@
+// app/api/health/route.ts
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 
@@ -23,9 +24,10 @@ export async function GET() {
             message: "Supabase connection successful",
             filesCount: data.length,
         });
-    } catch (err: any) {
+    } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : "Supabase connection failed";
         return NextResponse.json(
-            { success: false, message: err.message || "Supabase connection failed" },
+            { success: false, message: errorMessage },
             { status: 500 }
         );
     }

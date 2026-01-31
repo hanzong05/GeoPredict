@@ -64,7 +64,8 @@ export async function POST(request: NextRequest) {
                 }
             }
         } catch (err) {
-            console.log("No existing file found or error checking:", err);
+            const errorMessage = err instanceof Error ? err.message : "Unknown error checking file";
+            console.log("No existing file found or error checking:", errorMessage);
         }
 
         // Step 2: Upload new file as Raw_Data.xlsx
@@ -127,23 +128,25 @@ export async function POST(request: NextRequest) {
                 pipelineData: pipelineData
             });
 
-        } catch (pipelineError: any) {
-            console.error("Error triggering pipeline:", pipelineError);
+        } catch (pipelineError) {
+            const errorMessage = pipelineError instanceof Error ? pipelineError.message : "Unknown pipeline error";
+            console.error("Error triggering pipeline:", errorMessage);
 
             return NextResponse.json({
                 success: true,
                 message: `File uploaded successfully as ${TARGET_FILENAME}, but failed to trigger pipeline`,
                 path: uploadData.path,
                 originalName: file.name,
-                pipelineError: pipelineError.message,
+                pipelineError: errorMessage,
                 pipelineStatus: 'failed'
             });
         }
 
-    } catch (err: any) {
-        console.error("Upload error:", err);
+    } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : "Failed to upload file";
+        console.error("Upload error:", errorMessage);
         return NextResponse.json(
-            { error: err.message || "Failed to upload file" },
+            { error: errorMessage },
             { status: 500 }
         );
     }
