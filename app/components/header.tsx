@@ -7,7 +7,7 @@ import { predictByLocation } from "@/lib/actions/liquefaction";
 
 interface HeaderProps {
   onLocationSubmit?: (lat: number, lng: number) => void;
-  onPredictionResult?: (data: any) => void; // ← ADD THIS PROP
+  onPredictionResult?: (data: any) => void;
   onPredictingChange?: (loading: boolean) => void;
 }
 
@@ -35,7 +35,7 @@ const Header = ({
   }, []);
 
   useEffect(() => {
-    if (searchInputRef.current && showResults) {
+    if (searchInputRef.current && showResults && mounted) {
       const rect = searchInputRef.current.getBoundingClientRect();
       setDropdownPosition({
         top: rect.bottom + window.scrollY,
@@ -43,11 +43,9 @@ const Header = ({
         width: rect.width,
       });
     }
-  }, [showResults, searchQuery]);
+  }, [showResults, searchQuery, mounted]);
 
-  // ============================================================================
-  // NEW: Prediction function
-  // ============================================================================
+  // Prediction function
   const handlePrediction = async (lat: number, lng: number) => {
     setIsLoading(true);
     onPredictingChange?.(true);
@@ -55,12 +53,10 @@ const Header = ({
       const result = await predictByLocation(lat, lng);
 
       if (result.success && result.data) {
-        // Pass prediction result to parent component
         if (onPredictionResult) {
           onPredictionResult(result.data);
         }
 
-        // Also notify parent about location change
         if (onLocationSubmit) {
           await onLocationSubmit(lat, lng);
         }
@@ -75,16 +71,14 @@ const Header = ({
       onPredictingChange?.(false);
     }
   };
-  // ============================================================================
 
-  // Call the prediction function when the location is submitted
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const lat = parseFloat(latitude);
     const lng = parseFloat(longitude);
 
     if (!isNaN(lat) && !isNaN(lng)) {
-      await handlePrediction(lat, lng); // Calls prediction
+      await handlePrediction(lat, lng);
     }
   };
 
@@ -96,12 +90,10 @@ const Header = ({
           const lat = position.coords.latitude;
           const lng = position.coords.longitude;
 
-          // Fill the lat/long fields with 4 decimal places
           setLatitude(lat.toFixed(4));
           setLongitude(lng.toFixed(4));
 
-          // Get prediction
-          await handlePrediction(lat, lng); // ← CHANGED: Now calls prediction
+          await handlePrediction(lat, lng);
         },
         (error) => {
           console.error("Error getting location:", error);
@@ -143,19 +135,16 @@ const Header = ({
   };
 
   const handleSelectResult = async (result: any) => {
-    // Hide dropdown immediately
     setShowResults(false);
     setSearchResults([]);
     setSearchQuery("");
 
-    // Fill lat/long inputs with 4 decimal places
     const lat = parseFloat(result.lat);
     const lng = parseFloat(result.lon);
     setLatitude(lat.toFixed(4));
     setLongitude(lng.toFixed(4));
 
-    // Get prediction
-    await handlePrediction(lat, lng); // ← CHANGED: Now calls prediction
+    await handlePrediction(lat, lng);
   };
 
   return (
@@ -196,7 +185,7 @@ const Header = ({
                 />
               </div>
 
-              {/* Search Results Dropdown - Using Portal */}
+              {/* Search Results Dropdown - Using Portal only when mounted */}
               {mounted &&
                 showResults &&
                 searchResults.length > 0 &&
