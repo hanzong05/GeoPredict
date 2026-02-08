@@ -103,7 +103,7 @@ export async function POST(request: NextRequest) {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    file_path: currentFilePath, x
+                    file_path: currentFilePath,
                     bucket_name: BUCKET_NAME,
                     trigger_source: 'upload'
                 })
