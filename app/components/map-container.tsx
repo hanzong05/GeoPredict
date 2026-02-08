@@ -104,6 +104,17 @@ const FlyToLocation = memo(
 );
 
 FlyToLocation.displayName = "FlyToLocation";
+const InvalidateMapSize = () => {
+  const map = useMap();
+
+  useEffect(() => {
+    setTimeout(() => {
+      map.invalidateSize();
+    }, 100);
+  }, [map]);
+
+  return null;
+};
 
 // LocationMarker component - memoized
 const LocationMarker = memo(
@@ -175,15 +186,11 @@ export const LeafletMapContainer = memo(
         <MapContainer
           center={[12.8797, 121.774]}
           zoom={6}
-          scrollWheelZoom={true}
+          scrollWheelZoom
           className="w-full h-full"
-          zoomControl={true}
-          whenReady={(map) => {
-            setTimeout(() => {
-              map.target.invalidateSize();
-            }, 100);
-          }}
+          zoomControl
         >
+          <InvalidateMapSize />
           <ZoomToTarlac />
           <FlyToLocation position={markerPosition} />
           <LocationMarker
