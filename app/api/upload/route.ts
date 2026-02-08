@@ -5,7 +5,7 @@ import { createServerClient } from "@/lib/supabase-server";
 const BUCKET_NAME = "geotechnical-data";
 const RAW_FOLDER = "raw";
 const OLD_RAW_FOLDER = "old_raw_files";
-const TARGET_FILENAME = "Raw_Data.xlsx";
+const TARGET_FILENAME = "Raw_data.xlsx";
 const PYTHON_API_URL = process.env.PYTHON_SERVICE_URL || 'http://localhost:8000';
 
 // Mark as dynamic to prevent build-time execution
@@ -94,16 +94,16 @@ export async function POST(request: NextRequest) {
         console.log(`✅ Successfully uploaded as ${TARGET_FILENAME}`);
 
         // Step 3: Trigger Python pipeline
-        console.log(`🚀 Triggering Python pipeline at ${PYTHON_API_URL}/pipeline/start`);
+        console.log(`🚀 Triggering Python pipeline at ${PYTHON_API_URL}/pipeline-and-train/start`);
 
         try {
-            const pipelineResponse = await fetch(`${PYTHON_API_URL}/pipeline/start`, {
+            const pipelineResponse = await fetch(`${PYTHON_API_URL}/pipeline-and-train/start`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    file_path: currentFilePath,
+                    file_path: currentFilePath, x
                     bucket_name: BUCKET_NAME,
                     trigger_source: 'upload'
                 })
