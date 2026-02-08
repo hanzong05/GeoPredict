@@ -9,7 +9,7 @@ import {
   IoBulb,
   IoDocumentText,
   IoAlertCircle,
-  IoGitCompare,
+  // IoGitCompare,
   IoSearchOutline,
 } from "react-icons/io5";
 
