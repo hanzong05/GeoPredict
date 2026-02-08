@@ -103,7 +103,7 @@ export default function Page() {
         if (data.pipelineStatus === "started") {
           message += "\n\n🚀 Pipeline processing started successfully!";
         } else if (data.pipelineStatus === "failed") {
-          message += `\n\n⚠️ Warning: Pipeline failed to start\nError: ${data.pipelineError}`;
+          message += `\n\n   Warning: Pipeline failed to start\nError: ${data.pipelineError}`;
         }
 
         alert(message);

@@ -371,7 +371,7 @@ Generated: ${new Date().toLocaleString()}`;
 
                 <div className="bg-red-50 p-2 rounded-md">
                   <p className="text-xs text-red-700 font-medium">
-                    ⚠️ {Math.round(capacityReduction)}% Capacity Reduction
+                    {Math.round(capacityReduction)}% Capacity Reduction
                   </p>
                 </div>
               </div>
@@ -405,16 +405,6 @@ Generated: ${new Date().toLocaleString()}`;
 
           {/* Action Buttons */}
           <div className="space-y-2 pt-2">
-            {hasValidData && (
-              <button
-                onClick={() => onToggleComparison?.()}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-5 rounded-lg flex items-center justify-center gap-2.5 transition-all shadow-sm hover:shadow-md"
-              >
-                <IoGitCompare size={18} />
-                View Comparison
-              </button>
-            )}
-
             <button
               onClick={handleDownload}
               disabled={!hasValidData}

@@ -1,7 +1,13 @@
 // lib/actions/liquefaction.ts
 'use server'
 
+// IMPORTANT: Make sure .env.local has this:
+// PYTHON_SERVICE_URL=http://localhost:8000
+
 const PYTHON_API_URL = (process.env.PYTHON_SERVICE_URL || 'http://localhost:8000').replace(/\.$/, '');
+
+// Log on startup to debug
+console.log('[Server Action] Python API URL:', PYTHON_API_URL);
 
 
 export interface PredictionInput {
@@ -23,8 +29,8 @@ export interface PredictionResult {
     };
     risk_assessment: {
         risk_level: 'LOW' | 'MEDIUM' | 'HIGH';
-        probability: number;  // 0-100
-        severity: string;     // "Minor" | "Moderate" | "Severe"
+        probability: number;
+        severity: string;
     };
     soil_parameters: {
         spt_n60: number;
@@ -37,7 +43,7 @@ export interface PredictionResult {
     };
     settlement: {
         predicted_cm: number;
-        severity: string;  // "Minor" | "Moderate" | "Severe"
+        severity: string;
     };
     bearing_capacity: {
         pre_liquefaction_kpa: number;
@@ -68,49 +74,91 @@ export interface NearestBoreholeResult {
 
 
 export async function predictByLocation(latitude: number, longitude: number) {
+    const url = `${PYTHON_API_URL}/predict-by-location?latitude=${latitude}&longitude=${longitude}`;
+
+    console.log('[Server Action] Fetching prediction from:', url);
+
     try {
-        const response = await fetch(
-            `${PYTHON_API_URL}/predict-by-location?latitude=${latitude}&longitude=${longitude}`,
-            {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                cache: 'no-store',
-            }
-        );
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            cache: 'no-store',
+            // Add timeout
+            signal: AbortSignal.timeout(15000), // 15 second timeout
+        });
+
+        console.log('[Server Action] Response status:', response.status);
 
         if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.detail || 'Prediction failed');
+            const error = await response.json().catch(() => ({ detail: 'Unknown error' }));
+            console.error('[Server Action] API error:', error);
+            throw new Error(error.detail || `API returned ${response.status}`);
         }
 
         const data: PredictionResult = await response.json();
+        console.log('[Server Action] Prediction successful');
         return { success: true, data };
 
     } catch (error) {
-        console.error('Prediction error:', error);
+        console.error('[Server Action] Prediction error:', error);
+
+        // Provide helpful error messages
+        if (error instanceof Error) {
+            if (error.name === 'AbortError') {
+                return {
+                    success: false,
+                    error: 'Request timeout - Python API took too long to respond'
+                };
+            }
+
+            if (error.message.includes('ECONNREFUSED')) {
+                return {
+                    success: false,
+                    error: `Cannot connect to Python API at ${PYTHON_API_URL}. Make sure it's running: python api_corrected.py`
+                };
+            }
+
+            if (error.message.includes('ENOTFOUND') || error.message.includes('getaddrinfo')) {
+                return {
+                    success: false,
+                    error: `Cannot resolve hostname in ${PYTHON_API_URL}. Check your PYTHON_SERVICE_URL environment variable.`
+                };
+            }
+
+            return {
+                success: false,
+                error: error.message
+            };
+        }
+
         return {
             success: false,
-            error: error instanceof Error ? error.message : 'Prediction failed'
+            error: 'Prediction failed with unknown error'
         };
     }
 }
 
 
 export async function predictLiquefaction(input: PredictionInput) {
+    const url = `${PYTHON_API_URL}/predict`;
+
+    console.log('[Server Action] Posting prediction to:', url);
+
     try {
-        const response = await fetch(`${PYTHON_API_URL}/predict`, {
+        const response = await fetch(url, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify(input),
             cache: 'no-store',
+            signal: AbortSignal.timeout(15000),
         });
 
         if (!response.ok) {
-            const error = await response.json();
+            const error = await response.json().catch(() => ({ detail: 'Unknown error' }));
             throw new Error(error.detail || 'Prediction failed');
         }
 
@@ -118,7 +166,7 @@ export async function predictLiquefaction(input: PredictionInput) {
         return { success: true, data };
 
     } catch (error) {
-        console.error('Prediction error:', error);
+        console.error('[Server Action] Prediction error:', error);
         return {
             success: false,
             error: error instanceof Error ? error.message : 'Prediction failed'
@@ -128,20 +176,20 @@ export async function predictLiquefaction(input: PredictionInput) {
 
 
 export async function getNearestBorehole(latitude: number, longitude: number) {
+    const url = `${PYTHON_API_URL}/nearest-borehole?latitude=${latitude}&longitude=${longitude}`;
+
     try {
-        const response = await fetch(
-            `${PYTHON_API_URL}/nearest-borehole?latitude=${latitude}&longitude=${longitude}`,
-            {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                cache: 'no-store',
-            }
-        );
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            cache: 'no-store',
+            signal: AbortSignal.timeout(15000),
+        });
 
         if (!response.ok) {
-            const error = await response.json();
+            const error = await response.json().catch(() => ({ detail: 'Unknown error' }));
             throw new Error(error.detail || 'Failed to fetch borehole data');
         }
 
@@ -149,7 +197,7 @@ export async function getNearestBorehole(latitude: number, longitude: number) {
         return { success: true, data };
 
     } catch (error) {
-        console.error('Borehole fetch error:', error);
+        console.error('[Server Action] Borehole fetch error:', error);
         return {
             success: false,
             error: error instanceof Error ? error.message : 'Failed to fetch borehole data'
@@ -159,23 +207,37 @@ export async function getNearestBorehole(latitude: number, longitude: number) {
 
 
 export async function checkBackendHealth() {
+    const url = `${PYTHON_API_URL}/health`;
+
+    console.log('[Server Action] Checking health at:', url);
+
     try {
-        const response = await fetch(`${PYTHON_API_URL}/health`, {
+        const response = await fetch(url, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
             },
+            signal: AbortSignal.timeout(5000), // Shorter timeout for health check
         });
 
         if (!response.ok) {
-            throw new Error('Backend unhealthy');
+            throw new Error(`Health check returned ${response.status}`);
         }
 
         const data = await response.json();
+        console.log('[Server Action] Backend is healthy:', data);
         return { success: true, data };
 
     } catch (error) {
-        console.error('Health check error:', error);
+        console.error('[Server Action] Health check failed:', error);
+
+        if (error instanceof Error && error.message.includes('ECONNREFUSED')) {
+            return {
+                success: false,
+                error: `Backend unavailable at ${PYTHON_API_URL}. Start it with: python api_corrected.py`
+            };
+        }
+
         return { success: false, error: 'Backend service unavailable' };
     }
 }
@@ -200,10 +262,11 @@ export async function startTrainingPipeline() {
                 'Content-Type': 'application/json',
             },
             cache: 'no-store',
+            signal: AbortSignal.timeout(30000), // Longer timeout for pipeline start
         });
 
         if (!response.ok) {
-            const error = await response.json();
+            const error = await response.json().catch(() => ({ detail: 'Unknown error' }));
             throw new Error(error.detail || 'Failed to start pipeline');
         }
 
@@ -211,7 +274,7 @@ export async function startTrainingPipeline() {
         return { success: true, data };
 
     } catch (error) {
-        console.error('Pipeline start error:', error);
+        console.error('[Server Action] Pipeline start error:', error);
         return {
             success: false,
             error: error instanceof Error ? error.message : 'Failed to start pipeline'
@@ -227,6 +290,7 @@ export async function getTrainingPipelineStatus() {
                 'Content-Type': 'application/json',
             },
             cache: 'no-store',
+            signal: AbortSignal.timeout(5000),
         });
 
         if (!response.ok) {
@@ -237,7 +301,7 @@ export async function getTrainingPipelineStatus() {
         return { success: true, data };
 
     } catch (error) {
-        console.error('Pipeline status error:', error);
+        console.error('[Server Action] Pipeline status error:', error);
         return {
             success: false,
             error: error instanceof Error ? error.message : 'Failed to get status'
@@ -253,6 +317,7 @@ export async function getTrainingPipelineLogs(limit: number = 50) {
                 'Content-Type': 'application/json',
             },
             cache: 'no-store',
+            signal: AbortSignal.timeout(5000),
         });
 
         if (!response.ok) {
@@ -263,7 +328,7 @@ export async function getTrainingPipelineLogs(limit: number = 50) {
         return { success: true, data };
 
     } catch (error) {
-        console.error('Pipeline logs error:', error);
+        console.error('[Server Action] Pipeline logs error:', error);
         return {
             success: false,
             error: error instanceof Error ? error.message : 'Failed to get logs'
@@ -271,11 +336,7 @@ export async function getTrainingPipelineLogs(limit: number = 50) {
     }
 }
 
-// Check backend health on initialization
-checkBackendHealth().then(result => {
-    if (result.success) {
-        console.log('Backend is healthy:', result.data);
-    } else {
-        console.error('Backend health check failed:', result.error);
-    }
+// Check backend health on module load (optional, can be removed if causing issues)
+checkBackendHealth().catch(err => {
+    console.error('[Server Action] Initial health check failed:', err);
 });
