@@ -16,7 +16,8 @@ import "leaflet/dist/leaflet.css";
 // Fix Leaflet default icon - do this once at module level
 if (typeof window !== "undefined") {
   import("leaflet").then((L) => {
-    delete (L.Icon.Default.prototype as any)._getIconUrl;
+    delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)
+      ._getIconUrl;
     L.Icon.Default.mergeOptions({
       iconRetinaUrl:
         "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
