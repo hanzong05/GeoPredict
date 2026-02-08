@@ -7,12 +7,35 @@ interface FileItem {
   size?: number;
   created_at?: string;
   updated_at?: string;
-  metadata?: { size?: number };
+  metadata?: {
+    size?: number;
+  };
 }
 
 interface FolderItem {
   name: string;
   created_at?: string;
+}
+
+interface UploadResponse {
+  success: boolean;
+  message?: string;
+  error?: string;
+  originalName?: string;
+  pipelineStatus?: "started" | "failed" | "not_started";
+  pipelineError?: string;
+}
+
+interface FoldersResponse {
+  success: boolean;
+  folders: FolderItem[];
+  error?: string;
+}
+
+interface FilesResponse {
+  success: boolean;
+  files: FileItem[];
+  error?: string;
 }
 
 export default function Page() {
@@ -23,7 +46,7 @@ export default function Page() {
   const [uploading, setUploading] = useState(false);
   const [uploadSuccess, setUploadSuccess] = useState(false);
 
-  const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
   const BUCKET_NAME = "geotechnical-data";
 
   // Fetch folders on mount
@@ -35,12 +58,12 @@ export default function Page() {
     setLoading(true);
     try {
       const res = await fetch("/api/folders");
-      const data = await res.json();
-      if (data.success) {
+      const data: FoldersResponse = await res.json();
+      if (data.success && data.folders) {
         setFolders(data.folders);
       }
     } catch (err) {
-      console.error(err);
+      console.error("Error fetching folders:", err);
     } finally {
       setLoading(false);
     }
@@ -54,12 +77,12 @@ export default function Page() {
       setLoading(true);
       try {
         const res = await fetch(`/api/files/${selectedFolder}`);
-        const data = await res.json();
-        if (data.success) {
+        const data: FilesResponse = await res.json();
+        if (data.success && data.files) {
           setFiles(data.files);
         }
       } catch (err) {
-        console.error(err);
+        console.error("Error fetching files:", err);
       } finally {
         setLoading(false);
       }
@@ -67,8 +90,6 @@ export default function Page() {
 
     fetchFiles();
   }, [selectedFolder]);
-
-  // Update the handleFileUpload function in your page.tsx
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -92,18 +113,18 @@ export default function Page() {
         body: formData,
       });
 
-      const data = await res.json();
+      const data: UploadResponse = await res.json();
 
       if (data.success) {
         setUploadSuccess(true);
 
-        let message = `✅ ${data.message}\n\nOriginal file: ${data.originalName}\nSaved as: Raw_Data.xlsx`;
+        let message = `✅ ${data.message || "Upload successful"}\n\nOriginal file: ${data.originalName || file.name}\nSaved as: Raw_Data.xlsx`;
 
         // Add pipeline status to message
         if (data.pipelineStatus === "started") {
           message += "\n\n🚀 Pipeline processing started successfully!";
         } else if (data.pipelineStatus === "failed") {
-          message += `\n\n   Warning: Pipeline failed to start\nError: ${data.pipelineError}`;
+          message += `\n\n⚠️ Warning: Pipeline failed to start\nError: ${data.pipelineError || "Unknown error"}`;
         }
 
         alert(message);
@@ -112,19 +133,22 @@ export default function Page() {
         await fetchFolders();
         setSelectedFolder("raw");
       } else {
-        alert(`❌ Upload failed: ${data.error}`);
+        alert(`❌ Upload failed: ${data.error || "Unknown error"}`);
       }
     } catch (err) {
       console.error("Upload error:", err);
       alert("❌ Upload failed. Please try again.");
     } finally {
       setUploading(false);
-      e.target.value = "";
+      // Reset input value
+      if (e.target) {
+        e.target.value = "";
+      }
     }
   };
 
-  const formatBytes = (bytes?: number) => {
-    if (!bytes) return "0 B";
+  const formatBytes = (bytes?: number): string => {
+    if (!bytes || bytes === 0) return "0 B";
     const k = 1024;
     const sizes = ["B", "KB", "MB", "GB"];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
@@ -132,6 +156,7 @@ export default function Page() {
   };
 
   const downloadFile = (fileName: string) => {
+    if (!selectedFolder) return;
     const url = `${SUPABASE_URL}/storage/v1/object/public/${BUCKET_NAME}/${selectedFolder}/${fileName}`;
     window.open(url, "_blank");
   };
