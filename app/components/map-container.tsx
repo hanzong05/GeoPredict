@@ -211,7 +211,7 @@ export const LeafletMapContainer = memo(
         </MapContainer>
 
         {loading && (
-          <div className="absolute top-4 right-4 bg-white px-4 py-2 rounded-md shadow-md border border-gray-200 z-[1000]">
+          <div className="absolute   top-4 right-4 bg-white px-4 py-2 rounded-md shadow-md border border-gray-200 z-[1000]">
             <div className="flex items-center gap-2">
               <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-slate-900"></div>
               <span className="text-xs font-medium text-slate-700">
