@@ -336,7 +336,3 @@ export async function getTrainingPipelineLogs(limit: number = 50) {
     }
 }
 
-// Check backend health on module load (optional, can be removed if causing issues)
-checkBackendHealth().catch(err => {
-    console.error('[Server Action] Initial health check failed:', err);
-});
