@@ -3,39 +3,6 @@
 import { Waves, MapPin, Search } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { predictByLocation } from "@/lib/actions/liquefaction";
-
-interface PredictionData {
-  location: {
-    latitude: number;
-    longitude: number;
-    nearest_borehole_distance_km?: number;
-  };
-  risk_assessment: {
-    risk_level: "LOW" | "MEDIUM" | "HIGH";
-    probability: number;
-    severity: string;
-  };
-  soil_parameters: {
-    spt_n60: number;
-    unit_weight: number;
-    csr: number;
-    crr: number;
-    gwl: number;
-    fines_percent: number;
-    source?: string;
-  };
-  settlement: {
-    predicted_cm: number;
-    severity: string;
-  };
-  bearing_capacity: {
-    pre_liquefaction_kpa: number;
-    post_liquefaction_kpa: number;
-    capacity_reduction_percent: number;
-  };
-  recommendations: string[];
-}
 
 interface SearchResult {
   lat: string;
@@ -44,20 +11,14 @@ interface SearchResult {
 }
 
 interface HeaderProps {
-  onLocationSubmit?: (lat: number, lng: number) => void;
-  onPredictionResult?: (data: PredictionData) => void;
-  onPredictingChange?: (loading: boolean) => void;
+  onRequestPrediction: (lat: number, lng: number) => void;
 }
 
-const Header = ({
-  onLocationSubmit,
-  onPredictionResult,
-  onPredictingChange,
-}: HeaderProps) => {
+const Header = ({ onRequestPrediction }: HeaderProps) => {
   const [latitude, setLatitude] = useState("");
   const [longitude, setLongitude] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLocating, setIsLocating] = useState(false);
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [showResults, setShowResults] = useState(false);
   const [dropdownPosition, setDropdownPosition] = useState({
@@ -83,62 +44,33 @@ const Header = ({
     }
   }, [showResults, searchQuery, mounted]);
 
-  // Prediction function
-  const handlePrediction = async (lat: number, lng: number) => {
-    setIsLoading(true);
-    onPredictingChange?.(true);
-    try {
-      const result = await predictByLocation(lat, lng);
-
-      if (result.success && result.data) {
-        if (onPredictionResult) {
-          onPredictionResult(result.data as PredictionData);
-        }
-
-        if (onLocationSubmit) {
-          await onLocationSubmit(lat, lng);
-        }
-      } else {
-        alert(`Prediction failed: ${result.error}`);
-      }
-    } catch (error) {
-      console.error("Prediction error:", error);
-      alert("Failed to get prediction");
-    } finally {
-      setIsLoading(false);
-      onPredictingChange?.(false);
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const lat = parseFloat(latitude);
     const lng = parseFloat(longitude);
-
     if (!isNaN(lat) && !isNaN(lng)) {
-      await handlePrediction(lat, lng);
+      onRequestPrediction(lat, lng);
     }
   };
 
   const handleUseMyLocation = () => {
     if (navigator.geolocation) {
-      setIsLoading(true);
+      setIsLocating(true);
       navigator.geolocation.getCurrentPosition(
-        async (position) => {
+        (position) => {
           const lat = position.coords.latitude;
           const lng = position.coords.longitude;
-
           setLatitude(lat.toFixed(4));
           setLongitude(lng.toFixed(4));
-
-          await handlePrediction(lat, lng);
+          setIsLocating(false);
+          onRequestPrediction(lat, lng);
         },
         (error) => {
           console.error("Error getting location:", error);
           alert(
             "Unable to get your location. Please check your browser permissions.",
           );
-          setIsLoading(false);
+          setIsLocating(false);
         },
       );
     } else {
@@ -172,7 +104,7 @@ const Header = ({
     handleSearch(value);
   };
 
-  const handleSelectResult = async (result: SearchResult) => {
+  const handleSelectResult = (result: SearchResult) => {
     setShowResults(false);
     setSearchResults([]);
     setSearchQuery("");
@@ -181,8 +113,7 @@ const Header = ({
     const lng = parseFloat(result.lon);
     setLatitude(lat.toFixed(4));
     setLongitude(lng.toFixed(4));
-
-    await handlePrediction(lat, lng);
+    onRequestPrediction(lat, lng);
   };
 
   return (
@@ -218,8 +149,7 @@ const Header = ({
                   placeholder="Search location..."
                   value={searchQuery}
                   onChange={handleSearchInputChange}
-                  disabled={isLoading}
-                  className="w-full sm:w-48 pl-8 pr-3 py-1.5 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  className="w-full sm:w-48 pl-8 pr-3 py-1.5 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent"
                 />
               </div>
 
@@ -266,23 +196,20 @@ const Header = ({
                 placeholder="Latitude"
                 value={latitude}
                 onChange={(e) => setLatitude(e.target.value)}
-                disabled={isLoading}
-                className="w-20 sm:w-24 md:w-28 px-2 md:px-3 py-1.5 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
+                className="w-20 sm:w-24 md:w-28 px-2 md:px-3 py-1.5 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent"
               />
               <input
                 type="text"
                 placeholder="Longitude"
                 value={longitude}
                 onChange={(e) => setLongitude(e.target.value)}
-                disabled={isLoading}
-                className="w-20 sm:w-24 md:w-28 px-2 md:px-3 py-1.5 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
+                className="w-20 sm:w-24 md:w-28 px-2 md:px-3 py-1.5 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent"
               />
               <button
                 type="submit"
-                disabled={isLoading}
-                className="px-2 md:px-3 py-1.5 bg-slate-900 text-white text-xs font-medium rounded-md hover:bg-slate-800 transition-colors disabled:bg-slate-400 disabled:cursor-not-allowed"
+                className="px-2 md:px-3 py-1.5 bg-slate-900 text-white text-xs font-medium rounded-md hover:bg-slate-800 transition-colors"
               >
-                {isLoading ? "Loading..." : "Go"}
+                Go
               </button>
             </form>
 
@@ -290,15 +217,15 @@ const Header = ({
 
             <button
               onClick={handleUseMyLocation}
-              disabled={isLoading}
+              disabled={isLocating}
               className="flex items-center gap-1.5 md:gap-2 px-2 md:px-3 py-1.5 bg-emerald-600 text-white text-xs font-medium rounded-md hover:bg-emerald-700 transition-colors disabled:bg-emerald-400 disabled:cursor-not-allowed whitespace-nowrap"
             >
               <MapPin size={14} />
               <span className="hidden sm:inline">
-                {isLoading ? "Loading..." : "Use My Location"}
+                {isLocating ? "Locating..." : "Use My Location"}
               </span>
               <span className="sm:hidden">
-                {isLoading ? "Loading..." : "My Location"}
+                {isLocating ? "Locating..." : "My Location"}
               </span>
             </button>
 

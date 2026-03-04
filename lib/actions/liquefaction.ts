@@ -73,8 +73,15 @@ export interface NearestBoreholeResult {
 }
 
 
-export async function predictByLocation(latitude: number, longitude: number) {
-    const url = `${PYTHON_API_URL}/predict-by-location?latitude=${latitude}&longitude=${longitude}`;
+export async function predictByLocation(
+    latitude: number,
+    longitude: number,
+    qActual?: number,
+    magnitude?: number,
+) {
+    let url = `${PYTHON_API_URL}/predict-by-location?latitude=${latitude}&longitude=${longitude}`;
+    if (qActual !== undefined) url += `&q_actual=${qActual}`;
+    if (magnitude !== undefined) url += `&magnitude=${magnitude}`;
 
     console.log('[Server Action] Fetching prediction from:', url);
 

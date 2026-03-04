@@ -1,11 +1,13 @@
 "use client";
 
-import { useState, useCallback, memo } from "react";
+import { useState, useCallback } from "react";
 import dynamic from "next/dynamic";
 import Header from "./components/header";
 import LiquefactionSidebar from "./components/sidebar";
 import Comparison from "./components/comparison";
 import PredictingModal from "./components/modal";
+import InputModal from "./components/input-modal";
+import { predictByLocation } from "@/lib/actions/liquefaction";
 
 interface PredictionData {
   location: {
@@ -17,6 +19,9 @@ interface PredictionData {
     risk_level: "LOW" | "MEDIUM" | "HIGH";
     probability: number;
     severity: string;
+    factor_of_safety?: number;
+    confidence?: string;
+    data_source?: string;
   };
   soil_parameters: {
     spt_n60: number;
@@ -29,12 +34,18 @@ interface PredictionData {
   };
   settlement: {
     predicted_cm: number;
+    pre_liquefaction_cm?: number;
     severity: string;
   };
   bearing_capacity: {
     pre_liquefaction_kpa: number;
     post_liquefaction_kpa: number;
     capacity_reduction_percent: number;
+  };
+  foundation_recommendation?: {
+    base_m: number;
+    depth_m: number;
+    lb_ratio?: number;
   };
   recommendations: string[];
 }
@@ -56,8 +67,6 @@ const Map = dynamic(() => import("./components/map"), {
 
 export default function ClientPage() {
   const [location, setLocation] = useState("Tarlac City");
-  const [latitude, setLatitude] = useState(15.4754);
-  const [longitude, setLongitude] = useState(120.5963);
   const [isPredicting, setIsPredicting] = useState(false);
   const [externalLocation, setExternalLocation] = useState<{
     lat: number;
@@ -67,18 +76,19 @@ export default function ClientPage() {
   const [predictionData, setPredictionData] = useState<PredictionData | null>(
     null,
   );
+  const [showInputModal, setShowInputModal] = useState(false);
+  const [pendingLocation, setPendingLocation] = useState<{
+    lat: number;
+    lng: number;
+  } | null>(null);
 
-  // Memoize location change handler
+  // Reverse geocode and update location name
   const handleLocationChange = useCallback(async (lat: number, lng: number) => {
-    setLatitude(lat);
-    setLongitude(lng);
-
     try {
       const response = await fetch(
         `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=10&addressdetails=1`,
       );
       const data = await response.json();
-
       const address = data.address || {};
       const locationName =
         address.city ||
@@ -88,34 +98,48 @@ export default function ClientPage() {
         address.county ||
         address.state ||
         "Unknown Location";
-
       setLocation(locationName);
-    } catch (error) {
-      console.error("Error fetching location:", error);
+    } catch {
       setLocation(`Coordinates: ${lat.toFixed(4)}°N, ${lng.toFixed(4)}°E`);
     }
   }, []);
 
-  // Memoize manual location submit handler
-  const handleManualLocationSubmit = useCallback(
+  // Called when a location is selected (map click or header input)
+  // Nothing is fetched yet — just store the location and open the modal
+  const handleRequestPrediction = useCallback(
     (lat: number, lng: number) => {
+      setPendingLocation({ lat, lng });
       setExternalLocation({ lat, lng });
-      setLatitude(lat);
-      setLongitude(lng);
-      handleLocationChange(lat, lng);
+      setShowInputModal(true);
     },
-    [handleLocationChange],
+    [],
   );
 
-  // Memoize prediction result handler
-  const handlePredictionResult = useCallback(
-    (data: PredictionData) => {
-      setPredictionData(data);
-      setLatitude(data.location.latitude);
-      setLongitude(data.location.longitude);
-      handleLocationChange(data.location.latitude, data.location.longitude);
+  // Called when user submits the input modal
+  const handleInputModalSubmit = useCallback(
+    async (qActual: number, magnitude: number) => {
+      if (!pendingLocation) return;
+      setShowInputModal(false);
+      setIsPredicting(true);
+      try {
+        const result = await predictByLocation(
+          pendingLocation.lat,
+          pendingLocation.lng,
+          qActual,
+          magnitude,
+        );
+        if (result.success && result.data) {
+          setPredictionData(result.data as PredictionData);
+          // Reverse geocode only after the user confirms
+          handleLocationChange(pendingLocation.lat, pendingLocation.lng);
+        }
+      } catch (error) {
+        console.error("Prediction error:", error);
+      } finally {
+        setIsPredicting(false);
+      }
     },
-    [handleLocationChange],
+    [pendingLocation, handleLocationChange],
   );
 
   // Memoize comparison toggle
@@ -125,11 +149,7 @@ export default function ClientPage() {
 
   return (
     <div className="flex flex-col h-screen bg-white">
-      <Header
-        onLocationSubmit={handleManualLocationSubmit}
-        onPredictionResult={handlePredictionResult}
-        onPredictingChange={setIsPredicting}
-      />
+      <Header onRequestPrediction={handleRequestPrediction} />
       <div className="flex flex-col md:flex-row flex-1 overflow-hidden">
         {showComparison ? (
           <Comparison
@@ -145,13 +165,16 @@ export default function ClientPage() {
         )}
         <div className="flex-1 h-1/2 md:h-full">
           <Map
-            onLocationChange={handleLocationChange}
             externalLocation={externalLocation}
-            onPredictionResult={handlePredictionResult}
-            onPredictingChange={setIsPredicting}
+            onRequestPrediction={handleRequestPrediction}
           />
         </div>
       </div>
+      <InputModal
+        open={showInputModal}
+        onSubmit={handleInputModalSubmit}
+        onClose={() => setShowInputModal(false)}
+      />
       <PredictingModal
         open={isPredicting}
         message="Running soil liquefaction analysis…"
