@@ -32,21 +32,21 @@ const Header = ({ onRequestPrediction }: HeaderProps) => {
   // useEffect(() => {
   //   setMounted(true);
   // }, []);
-{typeof window !== "undefined" &&
-  showResults &&
-  searchResults.length > 0 &&
-  createPortal(
-  useEffect(() => {
-    if (searchInputRef.current && showResults && mounted) {
-      const rect = searchInputRef.current.getBoundingClientRect();
-      setDropdownPosition({
-        top: rect.bottom + window.scrollY,
-        left: rect.left + window.scrollX,
-        width: rect.width,
-      });
-    }
-  // }, [showResults, searchQuery, mounted]);
+
+ useEffect(() => {
+  if (searchInputRef.current && showResults) {
+    const rect = searchInputRef.current.getBoundingClientRect();
+    setDropdownPosition({
+      top: rect.bottom + window.scrollY,
+      left: rect.left + window.scrollX,
+      width: rect.width,
+    });
+  }
 }, [showResults, searchQuery]);
+  // }, [showResults, searchQuery, mounted]);
+// }, [showResults, searchQuery]);
+
+  
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const lat = parseFloat(latitude);
