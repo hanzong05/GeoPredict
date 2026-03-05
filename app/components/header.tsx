@@ -27,12 +27,15 @@ const Header = ({ onRequestPrediction }: HeaderProps) => {
     width: 0,
   });
   const searchInputRef = useRef<HTMLDivElement>(null);
-  const [mounted, setMounted] = useState(false);
+  // const [mounted, setMounted] = useState(false);
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
+  // useEffect(() => {
+  //   setMounted(true);
+  // }, []);
+{typeof window !== "undefined" &&
+  showResults &&
+  searchResults.length > 0 &&
+  createPortal(
   useEffect(() => {
     if (searchInputRef.current && showResults && mounted) {
       const rect = searchInputRef.current.getBoundingClientRect();
@@ -42,8 +45,8 @@ const Header = ({ onRequestPrediction }: HeaderProps) => {
         width: rect.width,
       });
     }
-  }, [showResults, searchQuery, mounted]);
-
+  // }, [showResults, searchQuery, mounted]);
+}, [showResults, searchQuery]);
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const lat = parseFloat(latitude);
