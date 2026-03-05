@@ -5,7 +5,7 @@ import type { FeatureCollection } from "geojson";
 import dynamic from "next/dynamic";
 import type { BoreholeFeature, BoreholeLegend } from "./map-container";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const API_BASE_URL = process.env.NEXT_PUBLIC_PYTHON_SERVICE_URL  ?? "http://localhost:8000";
 
 interface MapProps {
   externalLocation?: { lat: number; lng: number } | null;
