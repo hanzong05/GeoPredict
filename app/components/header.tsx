@@ -157,10 +157,10 @@ const Header = ({ onRequestPrediction }: HeaderProps) => {
               </div>
 
               {/* Search Results Dropdown - Using Portal only when mounted */}
-              {mounted &&
-                showResults &&
-                searchResults.length > 0 &&
-                createPortal(
+           {typeof window !== "undefined" &&
+  showResults &&
+  searchResults.length > 0 &&
+  createPortal(
                   <div
                     style={{
                       position: "fixed",
