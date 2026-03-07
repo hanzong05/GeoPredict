@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import LoginModal from "@/app/components/login-modal";
 
 interface FileItem {
   name: string;
@@ -39,6 +41,11 @@ interface FilesResponse {
 }
 
 export default function Page() {
+  const router = useRouter();
+  const [authChecked, setAuthChecked] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
+
   const [folders, setFolders] = useState<FolderItem[]>([]);
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
   const [files, setFiles] = useState<FileItem[]>([]);
@@ -49,10 +56,17 @@ export default function Page() {
   const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
   const BUCKET_NAME = "geotechnical-data";
 
-  // Fetch folders on mount
+  // Check auth on mount
   useEffect(() => {
-    fetchFolders();
+    const authenticated = sessionStorage.getItem("admin_authenticated") === "true";
+    setIsAuthenticated(authenticated);
+    setAuthChecked(true);
   }, []);
+
+  // Fetch folders on mount (only when authenticated)
+  useEffect(() => {
+    if (isAuthenticated) fetchFolders();
+  }, [isAuthenticated]);
 
   const fetchFolders = async () => {
     setLoading(true);
@@ -164,6 +178,56 @@ export default function Page() {
   const downloadFolder = () => {
     files.forEach((file) => downloadFile(file.name));
   };
+
+  // Auth loading state
+  if (!authChecked) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-3"></div>
+          <p className="text-gray-500 text-sm">Checking authentication…</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Not authenticated — block access
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+        <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-10 max-w-sm w-full text-center">
+          <div className="inline-flex items-center justify-center w-14 h-14 bg-red-50 rounded-full mb-4">
+            <svg className="w-7 h-7 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m0 0v2m0-2h2m-2 0H10m2-5V9m0 0V7m0 2h2M12 9H10M5 3h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z" />
+            </svg>
+          </div>
+          <h2 className="text-xl font-bold text-gray-900 mb-2">Access Restricted</h2>
+          <p className="text-gray-500 text-sm mb-6">
+            You must be logged in as an admin to access this page.
+          </p>
+          <div className="flex flex-col gap-3">
+            <button
+              onClick={() => setShowLoginModal(true)}
+              className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
+            >
+              Login
+            </button>
+            <button
+              onClick={() => router.push("/")}
+              className="w-full py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium rounded-lg transition-colors"
+            >
+              Go to Home
+            </button>
+          </div>
+        </div>
+        <LoginModal
+          open={showLoginModal}
+          onClose={() => setShowLoginModal(false)}
+          onSuccess={() => setIsAuthenticated(true)}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 p-8">

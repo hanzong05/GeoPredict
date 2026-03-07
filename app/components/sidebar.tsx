@@ -5,6 +5,7 @@ import {
   IoLocation,
   IoDocumentText,
   IoSearchOutline,
+  IoRefresh,
 } from "react-icons/io5";
 
 interface PredictionData {
@@ -31,8 +32,8 @@ interface PredictionData {
     source?: string;
   };
   settlement: {
-    predicted_cm: number;          // post-liquefaction settlement
-    pre_liquefaction_cm?: number;  // without liquefaction settlement
+    predicted_cm: number; // post-liquefaction settlement
+    pre_liquefaction_cm?: number; // without liquefaction settlement
     severity: string;
   };
   bearing_capacity: {
@@ -52,25 +53,13 @@ interface LiquefactionSidebarProps {
   location?: string;
   predictionData?: PredictionData | null;
   onToggleComparison?: () => void;
+  onReinput?: () => void;
 }
 
 // Section header component
-function SectionHeader({
-  number,
-  title,
-  color,
-}: {
-  number: number;
-  title: string;
-  color: string;
-}) {
+function SectionHeader({ title, color }: { title: string; color: string }) {
   return (
     <div className={`flex items-center gap-2 mb-3`}>
-      <span
-        className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold text-white ${color}`}
-      >
-        {number}
-      </span>
       <h3 className="text-sm font-semibold text-slate-900">{title}</h3>
     </div>
   );
@@ -95,9 +84,7 @@ function SubRow({
         <span className={`text-sm font-bold ${accent ?? "text-slate-900"}`}>
           {value}
         </span>
-        {unit && (
-          <span className="text-xs text-slate-400 ml-1">{unit}</span>
-        )}
+        {unit && <span className="text-xs text-slate-400 ml-1">{unit}</span>}
       </div>
     </div>
   );
@@ -106,6 +93,7 @@ function SubRow({
 export default function LiquefactionSidebar({
   location = "Tarlac City",
   predictionData,
+  onReinput,
 }: LiquefactionSidebarProps) {
   const hasValidData =
     predictionData &&
@@ -129,7 +117,8 @@ export default function LiquefactionSidebar({
   const finesPercent = predictionData?.soil_parameters.fines_percent ?? 0;
 
   const bearingPre = predictionData?.bearing_capacity.pre_liquefaction_kpa ?? 0;
-  const bearingPost = predictionData?.bearing_capacity.post_liquefaction_kpa ?? 0;
+  const bearingPost =
+    predictionData?.bearing_capacity.post_liquefaction_kpa ?? 0;
 
   const settlementPost = predictionData?.settlement.predicted_cm ?? 0;
   const settlementPre = predictionData?.settlement.pre_liquefaction_cm;
@@ -139,10 +128,34 @@ export default function LiquefactionSidebar({
   const foundationLbRatio = predictionData?.foundation_recommendation?.lb_ratio;
 
   const riskColors = {
-    HIGH:   { bg: "bg-red-50",    border: "border-red-200",    text: "text-red-600",    bar: "bg-red-500",    badge: "bg-red-600"    },
-    MEDIUM: { bg: "bg-orange-50", border: "border-orange-200", text: "text-orange-600", bar: "bg-orange-500", badge: "bg-orange-500" },
-    LOW:    { bg: "bg-green-50",  border: "border-green-200",  text: "text-green-600",  bar: "bg-green-500",  badge: "bg-green-600"  },
-  }[riskLevel] ?? { bg: "bg-gray-50", border: "border-gray-200", text: "text-gray-600", bar: "bg-gray-500", badge: "bg-gray-500" };
+    HIGH: {
+      bg: "bg-red-50",
+      border: "border-red-200",
+      text: "text-red-600",
+      bar: "bg-red-500",
+      badge: "bg-red-600",
+    },
+    MEDIUM: {
+      bg: "bg-orange-50",
+      border: "border-orange-200",
+      text: "text-orange-600",
+      bar: "bg-orange-500",
+      badge: "bg-orange-500",
+    },
+    LOW: {
+      bg: "bg-green-50",
+      border: "border-green-200",
+      text: "text-green-600",
+      bar: "bg-green-500",
+      badge: "bg-green-600",
+    },
+  }[riskLevel] ?? {
+    bg: "bg-gray-50",
+    border: "border-gray-200",
+    text: "text-gray-600",
+    bar: "bg-gray-500",
+    badge: "bg-gray-500",
+  };
 
   const handleDownload = () => {
     if (!hasValidData) {
@@ -157,7 +170,7 @@ Location: ${location}
 Coordinates: ${latitude.toFixed(4)}°N, ${longitude.toFixed(4)}°E
 ${distanceKm ? `Nearest Borehole: ${distanceKm.toFixed(2)} km away` : ""}
 
-1. LIQUEFACTION ANALYSIS
+LIQUEFACTION ANALYSIS
 Risk Level: ${riskLevel}
 Probability: ${probability}%
 ${factorOfSafety !== undefined ? `Factor of Safety: ${factorOfSafety.toFixed(2)}` : ""}
@@ -166,18 +179,18 @@ SPT N60: ${sptN60} | Unit Weight: ${unitWeight} kN/m³
 CSR: ${csr} | CRR: ${crr}
 GWL: ${gwl} m | Fines: ${finesPercent}%
 
-2. WITHOUT LIQUEFACTION
-A. Soil Bearing Capacity: ${Math.round(bearingPre)} kPa
-${settlementPre !== undefined ? `B. Settlement: ${settlementPre.toFixed(2)} cm` : ""}
+WITHOUT LIQUEFACTION
+Soil Bearing Capacity: ${Math.round(bearingPre)} kPa
+${settlementPre !== undefined ? `Settlement: ${settlementPre.toFixed(2)} cm` : ""}
 
-3. WITH LIQUEFACTION
-A. Post Soil Bearing Capacity: ${Math.round(bearingPost)} kPa
-B. Post Settlement: ${settlementPost.toFixed(2)} cm
+WITH LIQUEFACTION
+Post Soil Bearing Capacity: ${Math.round(bearingPost)} kPa
+Post Settlement: ${settlementPost.toFixed(2)} cm
 
-4. FOUNDATION RECOMMENDATION
-${foundationBase !== undefined ? `A. Base (B) of Foundation: ${foundationBase.toFixed(2)} m` : "A. Base (B) of Foundation: N/A"}
-${foundationDepth !== undefined ? `B. Depth (D) of Foundation: ${foundationDepth.toFixed(2)} m` : "B. Depth (D) of Foundation: N/A"}
-${foundationLbRatio !== undefined ? `C. L/B Ratio: ${foundationLbRatio.toFixed(2)}` : ""}
+FOUNDATION RECOMMENDATION
+${foundationBase !== undefined ? `Base (B) of Foundation: ${foundationBase.toFixed(2)} m` : "A. Base (B) of Foundation: N/A"}
+${foundationDepth !== undefined ? `Depth (D) of Foundation: ${foundationDepth.toFixed(2)} m` : "B. Depth (D) of Foundation: N/A"}
+${foundationLbRatio !== undefined ? `L/B Ratio: ${foundationLbRatio.toFixed(2)}` : ""}
 
 Generated: ${new Date().toLocaleString()}`;
 
@@ -194,7 +207,6 @@ Generated: ${new Date().toLocaleString()}`;
     <div className="w-full md:w-96 h-full bg-white border-r border-gray-200 flex flex-col overflow-hidden">
       <div className="flex-1 overflow-y-auto">
         <div className="p-4 md:p-6 space-y-4">
-
           {/* Location Header */}
           <div className="flex items-start gap-3">
             <div className="bg-slate-900 p-2 rounded-md flex-shrink-0 mt-0.5">
@@ -219,7 +231,10 @@ Generated: ${new Date().toLocaleString()}`;
           {!hasValidData && (
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <div className="flex items-start gap-3">
-                <IoSearchOutline className="text-blue-600 flex-shrink-0 mt-0.5" size={20} />
+                <IoSearchOutline
+                  className="text-blue-600 flex-shrink-0 mt-0.5"
+                  size={20}
+                />
                 <div>
                   <h3 className="text-sm font-semibold text-blue-900 mb-1">
                     No Prediction Data
@@ -235,19 +250,28 @@ Generated: ${new Date().toLocaleString()}`;
 
           {hasValidData && (
             <>
-              {/* ── 1. Liq Analysis ── */}
-              <div className={`${riskColors.bg} ${riskColors.border} border rounded-lg p-4`}>
-                <SectionHeader number={1} title="Liq Analysis" color={riskColors.badge} />
+              {/* ── 1. Liquefaction Analysis ── */}
+              <div
+                className={`${riskColors.bg} ${riskColors.border} border rounded-lg p-4`}
+              >
+                <SectionHeader
+                  title="Liquefaction Analysis"
+                  color={riskColors.badge}
+                />
 
                 {/* Risk badge + probability */}
                 <div className="flex items-center justify-between mb-3">
                   <div>
                     <p className="text-xs text-slate-500 mb-0.5">Risk Level</p>
-                    <p className={`text-2xl font-bold ${riskColors.text}`}>{riskLevel}</p>
+                    <p className={`text-2xl font-bold ${riskColors.text}`}>
+                      {riskLevel}
+                    </p>
                   </div>
                   <div className="text-right">
                     <p className="text-xs text-slate-500 mb-0.5">Probability</p>
-                    <p className={`text-2xl font-bold ${riskColors.text}`}>{probability}%</p>
+                    <p className={`text-2xl font-bold ${riskColors.text}`}>
+                      {probability}%
+                    </p>
                   </div>
                 </div>
                 <div className="h-1.5 bg-white/70 rounded-full overflow-hidden mb-4">
@@ -256,77 +280,46 @@ Generated: ${new Date().toLocaleString()}`;
                     style={{ width: `${probability}%` }}
                   />
                 </div>
-
-                {/* Soil params grid */}
-                <div className="grid grid-cols-3 gap-2">
-                  {[
-                    { label: "SPT N₆₀", value: sptN60, unit: "" },
-                    { label: "Unit Wt", value: unitWeight, unit: "kN/m³" },
-                    { label: "CSR", value: csr, unit: "" },
-                    { label: "CRR", value: crr, unit: "" },
-                    { label: "GWL", value: gwl, unit: "m" },
-                    { label: "Fines", value: `${finesPercent}%`, unit: "" },
-                  ].map(({ label, value, unit }) => (
-                    <div key={label} className="bg-white/70 rounded-md p-2 text-center">
-                      <p className="text-[10px] text-slate-500 mb-0.5">{label}</p>
-                      <p className="text-sm font-bold text-slate-900">
-                        {value}{unit && <span className="text-[10px] font-normal text-slate-400 ml-0.5">{unit}</span>}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-
-                {/* FS + Confidence row */}
-                {(factorOfSafety !== undefined || confidence) && (
-                  <div className="flex gap-2 mt-2">
-                    {factorOfSafety !== undefined && (
-                      <div className="flex-1 bg-white/70 rounded-md p-2 text-center">
-                        <p className="text-[10px] text-slate-500 mb-0.5">Factor of Safety</p>
-                        <p className="text-sm font-bold text-slate-900">{factorOfSafety.toFixed(2)}</p>
-                      </div>
-                    )}
-                    {confidence && (
-                      <div className="flex-1 bg-white/70 rounded-md p-2 text-center">
-                        <p className="text-[10px] text-slate-500 mb-0.5">Confidence</p>
-                        <p className="text-sm font-bold text-slate-900">{confidence}</p>
-                      </div>
-                    )}
-                  </div>
-                )}
               </div>
 
-              {/* ── 2. W/o Liq ── */}
+              {/* ── 2. Without Liquefaction ── */}
               <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
-                <SectionHeader number={2} title="W/o Liq" color="bg-slate-600" />
+                <SectionHeader
+                  title="Without Liquefaction"
+                  color="bg-slate-600"
+                />
                 <SubRow
-                  label="A. Soil Bearing Capacity"
+                  label="Soil Bearing Capacity"
                   value={Math.round(bearingPre)}
                   unit="kPa"
                 />
                 {settlementPre !== undefined ? (
                   <SubRow
-                    label="B. Settlement"
+                    label="Settlement"
                     value={settlementPre.toFixed(2)}
                     unit="cm"
                   />
                 ) : (
                   <div className="py-2 text-xs text-slate-400">
-                    B. Settlement — awaiting API data
+                    Settlement — awaiting API data
                   </div>
                 )}
               </div>
 
-              {/* ── 3. W/ Liq ── */}
+              {/* ── 3. With Liquefaction ── */}
               <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
-                <SectionHeader number={3} title="W/ Liq" color="bg-orange-500" />
+                <SectionHeader
+                  title="With Liquefaction"
+                  color="bg-orange-500"
+                />
                 <SubRow
-                  label="A. Post Soil Bearing Capacity"
+                  label="Post Soil Bearing Capacity"
                   value={Math.round(bearingPost)}
                   unit="kPa"
                   accent="text-orange-700"
                 />
                 <SubRow
-                  label="B. Post Settlement"
+                  label="Post Settlement"
                   value={settlementPost.toFixed(2)}
                   unit="cm"
                   accent="text-orange-700"
@@ -335,34 +328,37 @@ Generated: ${new Date().toLocaleString()}`;
 
               {/* ── 4. Foundation Recommendation ── */}
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <SectionHeader number={4} title="Foundation Recommendation" color="bg-blue-600" />
+                <SectionHeader
+                  title="Foundation Recommendation"
+                  color="bg-blue-600"
+                />
                 {foundationBase !== undefined ? (
                   <SubRow
-                    label="A. Base (B) of Foundation"
+                    label="Base (B) of Foundation"
                     value={foundationBase.toFixed(2)}
                     unit="m"
                     accent="text-blue-700"
                   />
                 ) : (
                   <div className="py-2 text-xs text-slate-400">
-                    A. Base (B) — awaiting API data
+                    Base (B) — awaiting API data
                   </div>
                 )}
                 {foundationDepth !== undefined ? (
                   <SubRow
-                    label="B. Depth (D) of Foundation"
+                    label="Depth (D) of Foundation"
                     value={foundationDepth.toFixed(2)}
                     unit="m"
                     accent="text-blue-700"
                   />
                 ) : (
                   <div className="py-2 text-xs text-slate-400">
-                    B. Depth (D) — awaiting API data
+                    Depth (D) — awaiting API data
                   </div>
                 )}
                 {foundationLbRatio !== undefined && (
                   <SubRow
-                    label="C. L/B Ratio"
+                    label="L/B Ratio"
                     value={foundationLbRatio.toFixed(2)}
                     unit=""
                     accent="text-blue-700"
@@ -371,7 +367,7 @@ Generated: ${new Date().toLocaleString()}`;
               </div>
 
               {/* Generate Report */}
-              <div className="pt-1">
+              <div className="pt-1 flex flex-col gap-2">
                 <button
                   onClick={handleDownload}
                   className="w-full bg-slate-800 hover:bg-slate-900 text-white font-medium py-3 px-5 rounded-lg flex items-center justify-center gap-2.5 transition-all shadow-sm hover:shadow-md"
@@ -379,10 +375,16 @@ Generated: ${new Date().toLocaleString()}`;
                   <IoDocumentText size={18} />
                   Generate Report
                 </button>
+                <button
+                  onClick={onReinput}
+                  className="w-full bg-white hover:bg-slate-50 text-slate-700 font-medium py-3 px-5 rounded-lg flex items-center justify-center gap-2.5 transition-all border border-slate-300 hover:border-slate-400 shadow-sm"
+                >
+                  <IoRefresh size={18} />
+                  Re-input Parameters
+                </button>
               </div>
             </>
           )}
-
         </div>
       </div>
     </div>

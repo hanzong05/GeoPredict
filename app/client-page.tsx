@@ -3,6 +3,7 @@
 import { useState, useCallback } from "react";
 import dynamic from "next/dynamic";
 import Header from "./components/header";
+import Landing from "./components/landing";
 import LiquefactionSidebar from "./components/sidebar";
 import Comparison from "./components/comparison";
 import PredictingModal from "./components/modal";
@@ -76,6 +77,7 @@ export default function ClientPage() {
   const [predictionData, setPredictionData] = useState<PredictionData | null>(
     null,
   );
+  const [showLanding, setShowLanding] = useState(true);
   const [showInputModal, setShowInputModal] = useState(false);
   const [pendingLocation, setPendingLocation] = useState<{
     lat: number;
@@ -108,6 +110,7 @@ export default function ClientPage() {
   // Nothing is fetched yet — just store the location and open the modal
   const handleRequestPrediction = useCallback(
     (lat: number, lng: number) => {
+      setShowLanding(false);
       setPendingLocation({ lat, lng });
       setExternalLocation({ lat, lng });
       setShowInputModal(true);
@@ -147,6 +150,23 @@ export default function ClientPage() {
     setShowComparison((prev) => !prev);
   }, []);
 
+  if (showLanding) {
+    return (
+      <>
+        <Landing onRequestPrediction={handleRequestPrediction} />
+        <InputModal
+          open={showInputModal}
+          onSubmit={handleInputModalSubmit}
+          onClose={() => setShowInputModal(false)}
+        />
+        <PredictingModal
+          open={isPredicting}
+          message="Running soil liquefaction analysis…"
+        />
+      </>
+    );
+  }
+
   return (
     <div className="flex flex-col h-screen bg-white">
       <Header onRequestPrediction={handleRequestPrediction} />
@@ -161,6 +181,7 @@ export default function ClientPage() {
             location={location}
             predictionData={predictionData}
             onToggleComparison={toggleComparison}
+            onReinput={() => setShowInputModal(true)}
           />
         )}
         <div className="flex-1 h-1/2 md:h-full">
