@@ -5,8 +5,7 @@
 // PYTHON_SERVICE_URL=http://localhost:8000
 
 const PYTHON_API_URL = (process.env.PYTHON_SERVICE_URL || 'http://localhost:8000').replace(/\.$/, '');
-const PYTHON_API_KEY = process.env.API_SECRET_KEY || 'geoteam';
-const pythonHeaders = { 'Content-Type': 'application/json', 'x-api-key': PYTHON_API_KEY };
+const pythonHeaders = { 'Content-Type': 'application/json', 'x-api-key': process.env.API_SECRET_KEY! };
 
 // Log on startup to debug
 console.log('[Server Action] Python API URL:', PYTHON_API_URL);

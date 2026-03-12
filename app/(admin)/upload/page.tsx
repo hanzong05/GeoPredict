@@ -40,7 +40,7 @@ interface FilesResponse {
   error?: string;
 }
 
-const API_KEY = process.env.NEXT_PUBLIC_API_KEY ?? "geoteam";
+const API_KEY = process.env.NEXT_PUBLIC_API_KEY ?? "";
 const apiHeaders = { "x-api-key": API_KEY };
 
 export default function Page() {

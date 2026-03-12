@@ -6,7 +6,6 @@ import type { FeatureCollection } from "geojson";
 import dynamic from "next/dynamic";
 import type { BoreholeFeature, BoreholeLegend } from "./map-container";
 
-const API_BASE_URL =(process.env.NEXT_PUBLIC_PYTHON_SERVICE_URL  || 'http://localhost:8000').replace(/\.$/, '');
 interface MapProps {
   externalLocation?: { lat: number; lng: number } | null;
   onRequestPrediction: (lat: number, lng: number) => void;
@@ -52,7 +51,7 @@ export default function Map({
   const fetchBoreholes = useCallback(async () => {
     setBoreholesLoading(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/boreholes`);
+      const res = await fetch("/api/boreholes");
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       setBoreholes(data.boreholes ?? []);
