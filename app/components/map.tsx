@@ -35,7 +35,10 @@ export default function Map({
 }: MapProps) {
   const [loading, setLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isLoggedIn] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return sessionStorage.getItem("admin_authenticated") === "true";
+  });
   const [markerPosition, setMarkerPosition] = useState<[number, number] | null>(
     null,
   );
@@ -69,7 +72,6 @@ export default function Map({
 
   useEffect(() => {
     setMounted(true);
-    setIsLoggedIn(sessionStorage.getItem("admin_authenticated") === "true");
 
     const fetchBoundary = async () => {
       try {

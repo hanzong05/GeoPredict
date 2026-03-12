@@ -24,12 +24,11 @@ export default function Landing({ onRequestPrediction }: LandingProps) {
   const [showResults, setShowResults] = useState(false);
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0 });
   const [showLoginModal, setShowLoginModal] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return sessionStorage.getItem("admin_authenticated") === "true";
+  });
   const searchInputRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    setIsLoggedIn(sessionStorage.getItem("admin_authenticated") === "true");
-  }, []);
 
   const handleLogout = () => {
     sessionStorage.removeItem("admin_authenticated");
