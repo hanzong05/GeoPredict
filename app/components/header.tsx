@@ -1,8 +1,9 @@
 "use client";
 
-import { Waves, MapPin, Search } from "lucide-react";
+import { Waves, MapPin, Search, LogIn, LogOut } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
+import LoginModal from "./login-modal";
 
 interface SearchResult {
   lat: string;
@@ -26,7 +27,18 @@ const Header = ({ onRequestPrediction }: HeaderProps) => {
     left: 0,
     width: 0,
   });
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const searchInputRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setIsLoggedIn(sessionStorage.getItem("admin_authenticated") === "true");
+  }, []);
+
+  const handleLogout = () => {
+    sessionStorage.removeItem("admin_authenticated");
+    setIsLoggedIn(false);
+  };
   // const [mounted, setMounted] = useState(false);
 
   // useEffect(() => {
@@ -241,9 +253,36 @@ const Header = ({ onRequestPrediction }: HeaderProps) => {
                 System Active
               </span>
             </div>
+
+            <div className="hidden lg:block w-px h-8 bg-gray-300"></div>
+
+            {/* Login / Logout Button */}
+            {isLoggedIn ? (
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 hover:border-red-300 text-slate-600 hover:text-red-600 text-xs font-medium rounded-md transition-colors shadow-sm"
+              >
+                <LogOut size={13} className="text-red-500" />
+                Logout
+              </button>
+            ) : (
+              <button
+                onClick={() => setShowLoginModal(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 hover:border-slate-300 text-slate-600 hover:text-slate-900 text-xs font-medium rounded-md transition-colors shadow-sm"
+              >
+                <LogIn size={13} className="text-emerald-600" />
+                Login
+              </button>
+            )}
           </div>
         </div>
       </div>
+
+      <LoginModal
+        open={showLoginModal}
+        onClose={() => setShowLoginModal(false)}
+        onSuccess={() => setIsLoggedIn(true)}
+      />
     </header>
   );
 };

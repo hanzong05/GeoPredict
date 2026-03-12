@@ -1,11 +1,15 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
+import { createPortal } from "react-dom";
+import type ExcelJS from "exceljs";
 import {
   IoLocation,
   IoDocumentText,
   IoSearchOutline,
   IoRefresh,
+  IoExpandOutline,
+  IoContractOutline,
 } from "react-icons/io5";
 
 interface PredictionData {
@@ -57,7 +61,7 @@ interface LiquefactionSidebarProps {
 }
 
 // Section header component
-function SectionHeader({ title, color }: { title: string; color: string }) {
+function SectionHeader({ title }: { title: string; color?: string }) {
   return (
     <div className={`flex items-center gap-2 mb-3`}>
       <h3 className="text-sm font-semibold text-slate-900">{title}</h3>
@@ -95,6 +99,7 @@ export default function LiquefactionSidebar({
   predictionData,
   onReinput,
 }: LiquefactionSidebarProps) {
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const hasValidData =
     predictionData &&
     predictionData.soil_parameters.spt_n60 > 0 &&
@@ -157,54 +162,233 @@ export default function LiquefactionSidebar({
     badge: "bg-gray-500",
   };
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     if (!hasValidData) {
       alert("No prediction data available. Please make a prediction first.");
       return;
     }
 
-    const report = `LIQUEFACTION RISK ASSESSMENT REPORT
-====================================
+    const ExcelJS = (await import("exceljs")).default;
+    const wb = new ExcelJS.Workbook();
+    wb.creator = "Liquefaction Assessment Platform";
+    wb.created = new Date();
 
-Location: ${location}
-Coordinates: ${latitude.toFixed(4)}°N, ${longitude.toFixed(4)}°E
-${distanceKm ? `Nearest Borehole: ${distanceKm.toFixed(2)} km away` : ""}
+    // ── Shared style helpers ───────────────────────────────────────────────
+    const riskFill: Record<string, ExcelJS.Fill> = {
+      HIGH:   { type: "pattern", pattern: "solid", fgColor: { argb: "FFFEE2E2" } },
+      MEDIUM: { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFF7ED" } },
+      LOW:    { type: "pattern", pattern: "solid", fgColor: { argb: "FFF0FDF4" } },
+    };
+    const riskFont: Record<string, Partial<ExcelJS.Font>> = {
+      HIGH:   { color: { argb: "FFDC2626" }, bold: true },
+      MEDIUM: { color: { argb: "FFD97706" }, bold: true },
+      LOW:    { color: { argb: "FF16A34A" }, bold: true },
+    };
+    const headerFill: ExcelJS.Fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF1E293B" } };
+    const sectionFill: ExcelJS.Fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF334155" } };
+    const subHeaderFill: ExcelJS.Fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF1F5F9" } };
+    const thinBorder: Partial<ExcelJS.Borders> = {
+      top:    { style: "thin", color: { argb: "FFE2E8F0" } },
+      bottom: { style: "thin", color: { argb: "FFE2E8F0" } },
+      left:   { style: "thin", color: { argb: "FFE2E8F0" } },
+      right:  { style: "thin", color: { argb: "FFE2E8F0" } },
+    };
 
-LIQUEFACTION ANALYSIS
-Risk Level: ${riskLevel}
-Probability: ${probability}%
-${factorOfSafety !== undefined ? `Factor of Safety: ${factorOfSafety.toFixed(2)}` : ""}
-${confidence ? `Confidence: ${confidence}` : ""}
-SPT N60: ${sptN60} | Unit Weight: ${unitWeight} kN/m³
-CSR: ${csr} | CRR: ${crr}
-GWL: ${gwl} m | Fines: ${finesPercent}%
+    const applyHeaderStyle = (row: ExcelJS.Row) => {
+      row.eachCell((cell) => {
+        cell.fill = headerFill;
+        cell.font = { color: { argb: "FFFFFFFF" }, bold: true, size: 11 };
+        cell.alignment = { vertical: "middle", horizontal: "left", wrapText: true };
+        cell.border = thinBorder;
+      });
+      row.height = 20;
+    };
 
-WITHOUT LIQUEFACTION
-Soil Bearing Capacity: ${Math.round(bearingPre)} kPa
-${settlementPre !== undefined ? `Settlement: ${settlementPre.toFixed(2)} cm` : ""}
+    const applySectionStyle = (row: ExcelJS.Row) => {
+      row.eachCell((cell) => {
+        cell.fill = sectionFill;
+        cell.font = { color: { argb: "FFFFFFFF" }, bold: true, size: 10 };
+        cell.alignment = { vertical: "middle" };
+        cell.border = thinBorder;
+      });
+      row.height = 18;
+    };
 
-WITH LIQUEFACTION
-Post Soil Bearing Capacity: ${Math.round(bearingPost)} kPa
-Post Settlement: ${settlementPost.toFixed(2)} cm
+    const applySubHeaderStyle = (row: ExcelJS.Row) => {
+      row.eachCell((cell) => {
+        cell.fill = subHeaderFill;
+        cell.font = { bold: true, size: 9, color: { argb: "FF475569" } };
+        cell.alignment = { vertical: "middle" };
+        cell.border = thinBorder;
+      });
+      row.height = 16;
+    };
 
-FOUNDATION RECOMMENDATION
-${foundationBase !== undefined ? `Base (B) of Foundation: ${foundationBase.toFixed(2)} m` : "A. Base (B) of Foundation: N/A"}
-${foundationDepth !== undefined ? `Depth (D) of Foundation: ${foundationDepth.toFixed(2)} m` : "B. Depth (D) of Foundation: N/A"}
-${foundationLbRatio !== undefined ? `L/B Ratio: ${foundationLbRatio.toFixed(2)}` : ""}
+    const applyDataStyle = (row: ExcelJS.Row) => {
+      row.eachCell((cell) => {
+        cell.font = { size: 10 };
+        cell.alignment = { vertical: "middle", wrapText: true };
+        cell.border = thinBorder;
+      });
+      row.height = 16;
+    };
 
-Generated: ${new Date().toLocaleString()}`;
+    // ── Sheet 1: Summary ──────────────────────────────────────────────────
+    const ws = wb.addWorksheet("Summary");
+    ws.columns = [
+      { key: "a", width: 38 },
+      { key: "b", width: 22 },
+      { key: "c", width: 12 },
+    ];
 
-    const blob = new Blob([report], { type: "text/plain" });
+    // Title row
+    const titleRow = ws.addRow(["LIQUEFACTION RISK ASSESSMENT REPORT"]);
+    ws.mergeCells(`A${titleRow.number}:C${titleRow.number}`);
+    titleRow.getCell(1).fill = headerFill;
+    titleRow.getCell(1).font = { color: { argb: "FFFFFFFF" }, bold: true, size: 14 };
+    titleRow.getCell(1).alignment = { vertical: "middle", horizontal: "center" };
+    titleRow.height = 28;
+
+    const genRow = ws.addRow(["Generated", new Date().toLocaleString(), ""]);
+    applyDataStyle(genRow);
+    genRow.getCell(1).font = { bold: true, size: 10, color: { argb: "FF64748B" } };
+
+    ws.addRow([]);
+
+    // ── Location ──
+    applySectionStyle(ws.addRow(["LOCATION", "", ""]));
+    applySubHeaderStyle(ws.addRow(["Field", "Value", ""]));
+    [
+      ["Location Name", location, ""],
+      ["Latitude", latitude.toFixed(6), "°N"],
+      ["Longitude", longitude.toFixed(6), "°E"],
+      ["Nearest Borehole Distance", distanceKm ? distanceKm.toFixed(2) : "N/A", "km"],
+    ].forEach((r) => applyDataStyle(ws.addRow(r)));
+
+    ws.addRow([]);
+
+    // ── Liquefaction Analysis ──
+    applySectionStyle(ws.addRow(["LIQUEFACTION ANALYSIS", "", ""]));
+    applySubHeaderStyle(ws.addRow(["Parameter", "Value", ""]));
+
+    const riskRow = ws.addRow(["Risk Level", riskLevel, ""]);
+    applyDataStyle(riskRow);
+    riskRow.getCell(2).fill = riskFill[riskLevel] ?? subHeaderFill;
+    riskRow.getCell(2).font = riskFont[riskLevel] ?? { bold: true };
+    riskRow.getCell(2).alignment = { horizontal: "center", vertical: "middle" };
+
+    [
+      ["Liquefaction Probability", `${probability}%`, ""],
+      ["Factor of Safety", factorOfSafety !== undefined ? factorOfSafety.toFixed(3) : "N/A", ""],
+      ["Confidence Level", confidence ?? "N/A", ""],
+      ["Data Source", predictionData?.risk_assessment.data_source ?? "N/A", ""],
+    ].forEach((r) => applyDataStyle(ws.addRow(r)));
+
+    ws.addRow([]);
+
+    // ── Soil Parameters ──
+    applySectionStyle(ws.addRow(["SOIL PARAMETERS (Critical Layer)", "", ""]));
+    applySubHeaderStyle(ws.addRow(["Parameter", "Value", "Unit"]));
+    [
+      ["SPT N60", sptN60, "blows/ft"],
+      ["Unit Weight (γ)", unitWeight, "kN/m³"],
+      ["Cyclic Stress Ratio (CSR)", csr.toFixed(4), "—"],
+      ["Cyclic Resistance Ratio (CRR)", crr.toFixed(4), "—"],
+      ["Groundwater Level (GWL)", gwl, "m"],
+      ["Fines Content", finesPercent, "%"],
+    ].forEach((r) => applyDataStyle(ws.addRow(r)));
+
+    ws.addRow([]);
+
+    // ── Bearing Capacity ──
+    applySectionStyle(ws.addRow(["BEARING CAPACITY", "", ""]));
+    applySubHeaderStyle(ws.addRow(["Condition", "Value", "Unit"]));
+    [
+      ["Without Liquefaction (Qa)", Math.round(bearingPre), "kPa"],
+      ["With Liquefaction (Post)", Math.round(bearingPost), "kPa"],
+      ["Capacity Reduction", `${predictionData?.bearing_capacity.capacity_reduction_percent.toFixed(1)}%`, ""],
+    ].forEach((r) => applyDataStyle(ws.addRow(r)));
+
+    ws.addRow([]);
+
+    // ── Settlement ──
+    applySectionStyle(ws.addRow(["SETTLEMENT", "", ""]));
+    applySubHeaderStyle(ws.addRow(["Condition", "Value", "Unit"]));
+    [
+      ["Without Liquefaction (Pre)", settlementPre !== undefined ? settlementPre.toFixed(2) : "N/A", "cm"],
+      ["With Liquefaction (Post)", settlementPost.toFixed(2), "cm"],
+      ["Settlement Severity", predictionData?.settlement.severity ?? "N/A", ""],
+    ].forEach((r) => applyDataStyle(ws.addRow(r)));
+
+    ws.addRow([]);
+
+    // ── Foundation Recommendation ──
+    applySectionStyle(ws.addRow(["FOUNDATION RECOMMENDATION", "", ""]));
+    applySubHeaderStyle(ws.addRow(["Parameter", "Value", "Unit"]));
+    [
+      ["Base Width (B)", foundationBase !== undefined ? foundationBase.toFixed(2) : "N/A", "m"],
+      ["Foundation Depth (D)", foundationDepth !== undefined ? foundationDepth.toFixed(2) : "N/A", "m"],
+      ["L/B Ratio", foundationLbRatio !== undefined ? foundationLbRatio.toFixed(2) : "N/A", "—"],
+    ].forEach((r) => applyDataStyle(ws.addRow(r)));
+
+    // ── Sheet 2: Recommendations ─────────────────────────────────────────
+    const wsRecs = wb.addWorksheet("Recommendations");
+    wsRecs.columns = [{ key: "a", width: 6 }, { key: "b", width: 90 }];
+    applyHeaderStyle(wsRecs.addRow(["#", "Recommendation"]));
+    (predictionData?.recommendations ?? []).forEach((r, i) => {
+      const row = wsRecs.addRow([i + 1, r]);
+      applyDataStyle(row);
+      row.getCell(2).alignment = { wrapText: true, vertical: "middle" };
+      row.height = 30;
+    });
+
+    // ── Sheet 3: Raw Data ────────────────────────────────────────────────
+    const wsRaw = wb.addWorksheet("Raw Data");
+    wsRaw.columns = [{ key: "a", width: 32 }, { key: "b", width: 22 }];
+    applyHeaderStyle(wsRaw.addRow(["Parameter", "Value"]));
+    [
+      ["latitude", latitude],
+      ["longitude", longitude],
+      ["risk_level", riskLevel],
+      ["probability_%", probability],
+      ["factor_of_safety", factorOfSafety ?? ""],
+      ["confidence", confidence ?? ""],
+      ["spt_n60", sptN60],
+      ["unit_weight_kn_m3", unitWeight],
+      ["csr", csr],
+      ["crr", crr],
+      ["gwl_m", gwl],
+      ["fines_content_%", finesPercent],
+      ["bearing_pre_kpa", bearingPre],
+      ["bearing_post_kpa", bearingPost],
+      ["capacity_reduction_%", predictionData?.bearing_capacity.capacity_reduction_percent ?? ""],
+      ["settlement_pre_cm", settlementPre ?? ""],
+      ["settlement_post_cm", settlementPost],
+      ["foundation_base_m", foundationBase ?? ""],
+      ["foundation_depth_m", foundationDepth ?? ""],
+      ["foundation_lb_ratio", foundationLbRatio ?? ""],
+      ["nearest_borehole_km", distanceKm ?? ""],
+    ].forEach((r) => applyDataStyle(wsRaw.addRow(r)));
+
+    // ── Export ───────────────────────────────────────────────────────────
+    const buffer = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `liquefaction-report-${Date.now()}.txt`;
+    a.download = `liquefaction-report-${Date.now()}.xlsx`;
     a.click();
     URL.revokeObjectURL(url);
   };
 
-  return (
-    <div className="w-full md:w-96 h-full bg-white border-r border-gray-200 flex flex-col overflow-hidden">
+  const sidebarContent = (
+    <div
+      className={
+        isFullscreen
+          ? "fixed inset-0 z-[9999] bg-white flex flex-col overflow-hidden shadow-2xl"
+          : "w-full md:w-96 h-full bg-white border-r border-gray-200 flex flex-col overflow-hidden"
+      }
+    >
       <div className="flex-1 overflow-y-auto">
         <div className="p-4 md:p-6 space-y-4">
           {/* Location Header */}
@@ -225,6 +409,17 @@ Generated: ${new Date().toLocaleString()}`;
                 </p>
               )}
             </div>
+            <button
+              onClick={() => setIsFullscreen((v) => !v)}
+              className="flex-shrink-0 p-1.5 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+              title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
+            >
+              {isFullscreen ? (
+                <IoContractOutline size={18} />
+              ) : (
+                <IoExpandOutline size={18} />
+              )}
+            </button>
           </div>
 
           {/* No data state */}
@@ -373,7 +568,7 @@ Generated: ${new Date().toLocaleString()}`;
                   className="w-full bg-slate-800 hover:bg-slate-900 text-white font-medium py-3 px-5 rounded-lg flex items-center justify-center gap-2.5 transition-all shadow-sm hover:shadow-md"
                 >
                   <IoDocumentText size={18} />
-                  Generate Report
+                  Export Excel Report
                 </button>
                 <button
                   onClick={onReinput}
@@ -389,4 +584,10 @@ Generated: ${new Date().toLocaleString()}`;
       </div>
     </div>
   );
+
+  if (isFullscreen && typeof window !== "undefined") {
+    return createPortal(sidebarContent, document.body);
+  }
+
+  return sidebarContent;
 }

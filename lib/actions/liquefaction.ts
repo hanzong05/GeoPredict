@@ -5,6 +5,8 @@
 // PYTHON_SERVICE_URL=http://localhost:8000
 
 const PYTHON_API_URL = (process.env.PYTHON_SERVICE_URL || 'http://localhost:8000').replace(/\.$/, '');
+const PYTHON_API_KEY = process.env.API_SECRET_KEY || 'geoteam';
+const pythonHeaders = { 'Content-Type': 'application/json', 'x-api-key': PYTHON_API_KEY };
 
 // Log on startup to debug
 console.log('[Server Action] Python API URL:', PYTHON_API_URL);
@@ -88,12 +90,10 @@ export async function predictByLocation(
     try {
         const response = await fetch(url, {
             method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            cache: 'no-store',
-            // Add timeout
-            signal: AbortSignal.timeout(15000), // 15 second timeout
+            headers: pythonHeaders,
+            // Cache per unique URL (lat/lon/q_actual/magnitude) for 1 hour
+            next: { revalidate: 3600 },
+            signal: AbortSignal.timeout(30000), // 30 second timeout
         });
 
         console.log('[Server Action] Response status:', response.status);
@@ -156,9 +156,7 @@ export async function predictLiquefaction(input: PredictionInput) {
     try {
         const response = await fetch(url, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            headers: pythonHeaders,
             body: JSON.stringify(input),
             cache: 'no-store',
             signal: AbortSignal.timeout(15000),
@@ -188,9 +186,7 @@ export async function getNearestBorehole(latitude: number, longitude: number) {
     try {
         const response = await fetch(url, {
             method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            headers: pythonHeaders,
             cache: 'no-store',
             signal: AbortSignal.timeout(15000),
         });
@@ -221,9 +217,7 @@ export async function checkBackendHealth() {
     try {
         const response = await fetch(url, {
             method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            headers: pythonHeaders,
             signal: AbortSignal.timeout(5000), // Shorter timeout for health check
         });
 
@@ -265,9 +259,7 @@ export async function startTrainingPipeline() {
     try {
         const response = await fetch(`${PYTHON_API_URL}/pipeline/start`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            headers: pythonHeaders,
             cache: 'no-store',
             signal: AbortSignal.timeout(30000), // Longer timeout for pipeline start
         });
@@ -293,9 +285,7 @@ export async function getTrainingPipelineStatus() {
     try {
         const response = await fetch(`${PYTHON_API_URL}/pipeline/status`, {
             method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            headers: pythonHeaders,
             cache: 'no-store',
             signal: AbortSignal.timeout(5000),
         });
@@ -320,9 +310,7 @@ export async function getTrainingPipelineLogs(limit: number = 50) {
     try {
         const response = await fetch(`${PYTHON_API_URL}/pipeline/logs?limit=${limit}`, {
             method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            headers: pythonHeaders,
             cache: 'no-store',
             signal: AbortSignal.timeout(5000),
         });

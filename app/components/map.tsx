@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { Upload } from "lucide-react";
 import type { FeatureCollection } from "geojson";
 import dynamic from "next/dynamic";
 import type { BoreholeFeature, BoreholeLegend } from "./map-container";
@@ -35,6 +36,7 @@ export default function Map({
 }: MapProps) {
   const [loading, setLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [markerPosition, setMarkerPosition] = useState<[number, number] | null>(
     null,
   );
@@ -68,6 +70,7 @@ export default function Map({
 
   useEffect(() => {
     setMounted(true);
+    setIsLoggedIn(sessionStorage.getItem("admin_authenticated") === "true");
 
     const fetchBoundary = async () => {
       try {
@@ -110,6 +113,16 @@ export default function Map({
         boreholesLoading={boreholesLoading}
         legend={legend}
       />
+
+      {isLoggedIn && (
+        <a
+          href="/upload"
+          title="Upload Data"
+          className="absolute bottom-6 right-6 z-[1000] w-12 h-12 bg-emerald-600 hover:bg-emerald-500 text-white rounded-full shadow-lg shadow-emerald-200 flex items-center justify-center transition-colors"
+        >
+          <Upload size={20} />
+        </a>
+      )}
     </div>
   );
 }

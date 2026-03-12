@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { X, LogIn } from "lucide-react";
 
 interface LoginModalProps {
@@ -15,7 +16,7 @@ export default function LoginModal({ open, onClose, onSuccess }: LoginModalProps
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  if (!open) return null;
+  if (!open || typeof window === "undefined") return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,29 +52,29 @@ export default function LoginModal({ open, onClose, onSuccess }: LoginModalProps
     onClose();
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className="bg-slate-900 border border-slate-700 rounded-2xl p-8 w-full max-w-sm shadow-2xl relative">
+  return createPortal(
+    <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/30 backdrop-blur-sm">
+      <div className="bg-white border border-slate-200 rounded-2xl p-8 w-full max-w-sm shadow-xl shadow-slate-200/60 relative">
         <button
           onClick={handleClose}
-          className="absolute top-4 right-4 text-slate-500 hover:text-white transition-colors"
+          className="absolute top-4 right-4 text-slate-400 hover:text-slate-700 transition-colors"
         >
           <X size={18} />
         </button>
 
         <div className="flex items-center gap-3 mb-6">
-          <div className="bg-slate-800 border border-slate-700 p-2 rounded-lg">
-            <LogIn className="text-emerald-400" size={20} />
+          <div className="bg-emerald-600 p-2 rounded-lg shadow-sm shadow-emerald-200">
+            <LogIn className="text-white" size={20} />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-white">Admin Login</h2>
+            <h2 className="text-lg font-bold text-slate-900">Admin Login</h2>
             <p className="text-slate-500 text-xs">Sign in to access the admin panel</p>
           </div>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">
+            <label className="block text-xs font-semibold text-slate-500 mb-1.5 uppercase tracking-wider">
               Username
             </label>
             <input
@@ -83,12 +84,12 @@ export default function LoginModal({ open, onClose, onSuccess }: LoginModalProps
               required
               autoComplete="username"
               placeholder="Enter your username"
-              className="w-full px-3 py-2.5 text-sm bg-slate-800 border border-slate-700 text-white placeholder-slate-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+              className="w-full px-3 py-2.5 text-sm bg-slate-50 border border-slate-200 text-slate-900 placeholder-slate-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent transition-colors"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wider">
+            <label className="block text-xs font-semibold text-slate-500 mb-1.5 uppercase tracking-wider">
               Password
             </label>
             <input
@@ -98,12 +99,12 @@ export default function LoginModal({ open, onClose, onSuccess }: LoginModalProps
               required
               autoComplete="current-password"
               placeholder="••••••••"
-              className="w-full px-3 py-2.5 text-sm bg-slate-800 border border-slate-700 text-white placeholder-slate-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+              className="w-full px-3 py-2.5 text-sm bg-slate-50 border border-slate-200 text-slate-900 placeholder-slate-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent transition-colors"
             />
           </div>
 
           {error && (
-            <p className="text-red-400 text-xs bg-red-950/40 border border-red-800/50 rounded-lg px-3 py-2">
+            <p className="text-red-600 text-xs bg-red-50 border border-red-200 rounded-lg px-3 py-2">
               {error}
             </p>
           )}
@@ -111,12 +112,13 @@ export default function LoginModal({ open, onClose, onSuccess }: LoginModalProps
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition-colors"
+            className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition-colors shadow-sm"
           >
             {loading ? "Signing in…" : "Sign In"}
           </button>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

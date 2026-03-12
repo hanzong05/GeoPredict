@@ -40,6 +40,9 @@ interface FilesResponse {
   error?: string;
 }
 
+const API_KEY = process.env.NEXT_PUBLIC_API_KEY ?? "geoteam";
+const apiHeaders = { "x-api-key": API_KEY };
+
 export default function Page() {
   const router = useRouter();
   const [authChecked, setAuthChecked] = useState(false);
@@ -53,8 +56,6 @@ export default function Page() {
   const [uploading, setUploading] = useState(false);
   const [uploadSuccess, setUploadSuccess] = useState(false);
 
-  const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-  const BUCKET_NAME = "geotechnical-data";
 
   // Check auth on mount
   useEffect(() => {
@@ -71,7 +72,7 @@ export default function Page() {
   const fetchFolders = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/folders");
+      const res = await fetch("/api/folders", { headers: apiHeaders });
       const data: FoldersResponse = await res.json();
       if (data.success && data.folders) {
         setFolders(data.folders);
@@ -90,7 +91,7 @@ export default function Page() {
     const fetchFiles = async () => {
       setLoading(true);
       try {
-        const res = await fetch(`/api/files/${selectedFolder}`);
+        const res = await fetch(`/api/files/${selectedFolder}`, { headers: apiHeaders });
         const data: FilesResponse = await res.json();
         if (data.success && data.files) {
           setFiles(data.files);
@@ -124,6 +125,7 @@ export default function Page() {
 
       const res = await fetch("/api/upload", {
         method: "POST",
+        headers: apiHeaders,
         body: formData,
       });
 
@@ -169,14 +171,23 @@ export default function Page() {
     return `${(bytes / Math.pow(k, i)).toFixed(2)} ${sizes[i]}`;
   };
 
-  const downloadFile = (fileName: string) => {
+  const downloadFile = async (fileName: string) => {
     if (!selectedFolder) return;
-    const url = `${SUPABASE_URL}/storage/v1/object/public/${BUCKET_NAME}/${selectedFolder}/${fileName}`;
-    window.open(url, "_blank");
+    try {
+      const res = await fetch(`/api/download?folder=${encodeURIComponent(selectedFolder)}&file=${encodeURIComponent(fileName)}`, { headers: apiHeaders });
+      const data = await res.json();
+      if (data.url) {
+        window.open(data.url, "_blank");
+      } else {
+        alert(`Download failed: ${data.error || "Unknown error"}`);
+      }
+    } catch {
+      alert("Download failed. Please try again.");
+    }
   };
 
   const downloadFolder = () => {
-    files.forEach((file) => downloadFile(file.name));
+    files.forEach((file) => { downloadFile(file.name); });
   };
 
   // Auth loading state
