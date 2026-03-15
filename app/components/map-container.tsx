@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, memo } from "react";
+import { useEffect, useRef, memo, useMemo } from "react";
 import type { FeatureCollection } from "geojson";
 import {
   MapContainer,
@@ -141,16 +141,23 @@ const LocationMarker = memo(
     position,
     setPosition,
     onRequestPrediction,
+    tarlacGeoJson,
   }: {
     position: [number, number] | null;
     setPosition: (pos: [number, number]) => void;
     onRequestPrediction: (lat: number, lng: number) => void;
+    tarlacGeoJson: FeatureCollection | null;
   }) => {
-    useMapEvents({
+    const map = useMapEvents({
       click(e) {
+        if (!isInsideTarlac(e.latlng.lat, e.latlng.lng, tarlacGeoJson)) return;
         const pos: [number, number] = [e.latlng.lat, e.latlng.lng];
         setPosition(pos);
         onRequestPrediction(e.latlng.lat, e.latlng.lng);
+      },
+      mousemove(e) {
+        const inside = isInsideTarlac(e.latlng.lat, e.latlng.lng, tarlacGeoJson);
+        map.getContainer().style.cursor = inside ? "" : "not-allowed";
       },
     });
     return position ? <Marker position={position} /> : null;
@@ -335,11 +342,79 @@ const BoreholeMarkers = memo(
 );
 BoreholeMarkers.displayName = "BoreholeMarkers";
 
+// ── Point-in-polygon (ray casting, GeoJSON coords: [lng, lat]) ───────────────
+function pointInRing(lng: number, lat: number, ring: number[][]): boolean {
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const xi = ring[i][0], yi = ring[i][1];
+    const xj = ring[j][0], yj = ring[j][1];
+    if (yi > lat !== yj > lat && lng < ((xj - xi) * (lat - yi)) / (yj - yi) + xi)
+      inside = !inside;
+  }
+  return inside;
+}
+
+function isInsideTarlac(lat: number, lng: number, geoJson: FeatureCollection | null): boolean {
+  if (!geoJson) return true; // allow clicks while boundary loads
+  for (const feature of geoJson.features) {
+    const geom = feature.geometry;
+    if (!geom) continue;
+    if (geom.type === "Polygon") {
+      if (pointInRing(lng, lat, geom.coordinates[0] as number[][])) return true;
+    } else if (geom.type === "MultiPolygon") {
+      for (const poly of geom.coordinates as number[][][][]) {
+        if (pointInRing(lng, lat, poly[0])) return true;
+      }
+    }
+  }
+  return false;
+}
+
+// ── Inverse mask — grays out everything outside Tarlac ────────────────────────
+const TarlacMask = memo(({ geoJson }: { geoJson: FeatureCollection }) => {
+  const maskFeature = useMemo(() => {
+    const holes: number[][][] = [];
+    for (const feature of geoJson.features) {
+      const geom = feature.geometry;
+      if (!geom) continue;
+      if (geom.type === "Polygon") {
+        holes.push(geom.coordinates[0] as number[][]);
+      } else if (geom.type === "MultiPolygon") {
+        for (const poly of geom.coordinates as number[][][][]) {
+          holes.push(poly[0]);
+        }
+      }
+    }
+    return {
+      type: "Feature" as const,
+      properties: {},
+      geometry: {
+        type: "Polygon" as const,
+        // world bbox as outer ring, Tarlac polygon(s) as holes
+        coordinates: [
+          [[-180, -90], [180, -90], [180, 90], [-180, 90], [-180, -90]],
+          ...holes,
+        ],
+      },
+    };
+  }, [geoJson]);
+
+  return (
+    <GeoJSON
+      key="tarlac-mask"
+      data={maskFeature}
+      style={{ fillColor: "#475569", fillOpacity: 0.45, color: "transparent", weight: 0 }}
+      interactive={false}
+    />
+  );
+});
+TarlacMask.displayName = "TarlacMask";
+
 const geoJsonStyle = {
   fillColor: "#3b82f6",
-  fillOpacity: 0.3,
+  fillOpacity: 0.08,
   color: "#1d4ed8",
-  weight: 3,
+  weight: 2.5,
 };
 
 const LEGEND_CONFIG = [
@@ -413,11 +488,13 @@ export const LeafletMapContainer = memo(
             position={markerPosition}
             setPosition={setMarkerPosition}
             onRequestPrediction={onRequestPrediction}
+            tarlacGeoJson={tarlacGeoJson}
           />
           <TileLayer
             attribution="&copy; OpenStreetMap contributors"
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
+          {tarlacGeoJson && <TarlacMask geoJson={tarlacGeoJson} />}
           {tarlacGeoJson && (
             <GeoJSON data={tarlacGeoJson} style={geoJsonStyle} />
           )}

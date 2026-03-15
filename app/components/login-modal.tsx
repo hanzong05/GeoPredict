@@ -31,6 +31,7 @@ export default function LoginModal({ open, onClose, onSuccess }: LoginModalProps
       const data = await res.json();
       if (data.success) {
         sessionStorage.setItem("admin_authenticated", "true");
+        window.dispatchEvent(new Event("auth-change"));
         setUsername("");
         setPassword("");
         onSuccess?.();

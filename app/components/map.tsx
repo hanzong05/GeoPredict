@@ -34,7 +34,7 @@ export default function Map({
 }: MapProps) {
   const [loading, setLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
-  const [isLoggedIn] = useState(() => {
+  const [isLoggedIn, setIsLoggedIn] = useState(() => {
     if (typeof window === "undefined") return false;
     return sessionStorage.getItem("admin_authenticated") === "true";
   });
@@ -86,6 +86,11 @@ export default function Map({
 
     fetchBoundary();
     fetchBoreholes(); // ← fetch boreholes on mount
+
+    const onAuthChange = () =>
+      setIsLoggedIn(sessionStorage.getItem("admin_authenticated") === "true");
+    window.addEventListener("auth-change", onAuthChange);
+    return () => window.removeEventListener("auth-change", onAuthChange);
   }, [fetchBoreholes]);
 
   if (!mounted) {

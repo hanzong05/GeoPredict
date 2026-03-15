@@ -4,6 +4,7 @@ import { Waves, MapPin, Search, LogIn, LogOut } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import LoginModal from "./login-modal";
+import LogoutConfirmModal from "./logout-confirm-modal";
 
 interface SearchResult {
   lat: string;
@@ -28,6 +29,7 @@ const Header = ({ onRequestPrediction }: HeaderProps) => {
     width: 0,
   });
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(() => {
     if (typeof window === "undefined") return false;
     return sessionStorage.getItem("admin_authenticated") === "true";
@@ -36,7 +38,9 @@ const Header = ({ onRequestPrediction }: HeaderProps) => {
 
   const handleLogout = () => {
     sessionStorage.removeItem("admin_authenticated");
+    window.dispatchEvent(new Event("auth-change"));
     setIsLoggedIn(false);
+    setShowLogoutModal(false);
   };
   // const [mounted, setMounted] = useState(false);
 
@@ -100,11 +104,18 @@ const Header = ({ onRequestPrediction }: HeaderProps) => {
     }
 
     try {
+      // Tarlac Province bounding box: SW(15.40,120.30) → NE(15.90,120.80)
+      const TARLAC_VIEWBOX = "120.30,15.90,120.80,15.40";
       const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5`,
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query + ", Tarlac, Philippines")}&limit=8&countrycodes=ph&viewbox=${TARLAC_VIEWBOX}&bounded=1`,
       );
       const data = (await response.json()) as SearchResult[];
-      setSearchResults(data);
+      const filtered = data.filter((r) => {
+        const lat = parseFloat(r.lat);
+        const lon = parseFloat(r.lon);
+        return lat >= 15.40 && lat <= 15.90 && lon >= 120.30 && lon <= 120.80;
+      });
+      setSearchResults(filtered);
       setShowResults(true);
     } catch (error) {
       console.error("Error searching location:", error);
@@ -258,7 +269,7 @@ const Header = ({ onRequestPrediction }: HeaderProps) => {
             {/* Login / Logout Button */}
             {isLoggedIn ? (
               <button
-                onClick={handleLogout}
+                onClick={() => setShowLogoutModal(true)}
                 className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 hover:border-red-300 text-slate-600 hover:text-red-600 text-xs font-medium rounded-md transition-colors shadow-sm"
               >
                 <LogOut size={13} className="text-red-500" />
@@ -281,6 +292,11 @@ const Header = ({ onRequestPrediction }: HeaderProps) => {
         open={showLoginModal}
         onClose={() => setShowLoginModal(false)}
         onSuccess={() => setIsLoggedIn(true)}
+      />
+      <LogoutConfirmModal
+        open={showLogoutModal}
+        onConfirm={handleLogout}
+        onCancel={() => setShowLogoutModal(false)}
       />
     </header>
   );

@@ -4,6 +4,7 @@ import { Waves, MapPin, Search, ArrowRight, LogIn, LogOut } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import LoginModal from "./login-modal";
+import LogoutConfirmModal from "./logout-confirm-modal";
 
 interface SearchResult {
   lat: string;
@@ -24,6 +25,7 @@ export default function Landing({ onRequestPrediction }: LandingProps) {
   const [showResults, setShowResults] = useState(false);
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0 });
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(() => {
     if (typeof window === "undefined") return false;
     return sessionStorage.getItem("admin_authenticated") === "true";
@@ -32,7 +34,9 @@ export default function Landing({ onRequestPrediction }: LandingProps) {
 
   const handleLogout = () => {
     sessionStorage.removeItem("admin_authenticated");
+    window.dispatchEvent(new Event("auth-change"));
     setIsLoggedIn(false);
+    setShowLogoutModal(false);
   };
 
   useEffect(() => {
@@ -85,11 +89,18 @@ export default function Landing({ onRequestPrediction }: LandingProps) {
       return;
     }
     try {
+      // Tarlac Province bounding box: SW(15.40,120.30) → NE(15.90,120.80)
+      const TARLAC_VIEWBOX = "120.30,15.90,120.80,15.40";
       const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5`,
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query + ", Tarlac, Philippines")}&limit=8&countrycodes=ph&viewbox=${TARLAC_VIEWBOX}&bounded=1`,
       );
       const data = (await response.json()) as SearchResult[];
-      setSearchResults(data);
+      const filtered = data.filter((r) => {
+        const lat = parseFloat(r.lat);
+        const lon = parseFloat(r.lon);
+        return lat >= 15.40 && lat <= 15.90 && lon >= 120.30 && lon <= 120.80;
+      });
+      setSearchResults(filtered);
       setShowResults(true);
     } catch (error) {
       console.error("Error searching location:", error);
@@ -120,7 +131,7 @@ export default function Landing({ onRequestPrediction }: LandingProps) {
       <div className="absolute top-4 right-4">
         {isLoggedIn ? (
           <button
-            onClick={handleLogout}
+            onClick={() => setShowLogoutModal(true)}
             className="flex items-center gap-2 px-4 py-2 bg-white hover:bg-red-50 border border-slate-200 hover:border-red-300 text-slate-600 hover:text-red-600 text-sm font-medium rounded-lg transition-colors shadow-sm"
           >
             <LogOut size={15} className="text-red-500" />
@@ -261,6 +272,11 @@ export default function Landing({ onRequestPrediction }: LandingProps) {
         open={showLoginModal}
         onClose={() => setShowLoginModal(false)}
         onSuccess={() => setIsLoggedIn(true)}
+      />
+      <LogoutConfirmModal
+        open={showLogoutModal}
+        onConfirm={handleLogout}
+        onCancel={() => setShowLogoutModal(false)}
       />
     </div>
   );
