@@ -96,11 +96,25 @@ export async function POST(request: NextRequest) {
         // Step 3: Trigger Python pipeline
         console.log(`🚀 Triggering Python pipeline at ${PYTHON_API_URL}/pipeline-and-train/start`);
 
+        const apiKey = process.env.API_SECRET_KEY;
+        if (!apiKey) {
+            console.error("API_SECRET_KEY is not configured");
+            return NextResponse.json({
+                success: true,
+                message: `File uploaded successfully as ${TARGET_FILENAME}, but pipeline API key not configured`,
+                path: uploadData.path,
+                originalName: file.name,
+                pipelineError: 'API_SECRET_KEY environment variable not set',
+                pipelineStatus: 'failed'
+            });
+        }
+
         try {
             const pipelineResponse = await fetch(`${PYTHON_API_URL}/pipeline-and-train/start`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'x-api-key': apiKey,
                 },
                 body: JSON.stringify({
                     file_path: currentFilePath,
