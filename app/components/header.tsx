@@ -48,20 +48,20 @@ const Header = ({ onRequestPrediction }: HeaderProps) => {
   //   setMounted(true);
   // }, []);
 
- useEffect(() => {
-  if (searchInputRef.current && showResults) {
-    const rect = searchInputRef.current.getBoundingClientRect();
-    setDropdownPosition({
-      top: rect.bottom + window.scrollY,
-      left: rect.left + window.scrollX,
-      width: rect.width,
-    });
-  }
-}, [showResults, searchQuery]);
+  useEffect(() => {
+    if (searchInputRef.current && showResults) {
+      const rect = searchInputRef.current.getBoundingClientRect();
+      setDropdownPosition({
+        top: rect.bottom + window.scrollY,
+        left: rect.left + window.scrollX,
+        width: rect.width,
+      });
+    }
+  }, [showResults, searchQuery]);
   // }, [showResults, searchQuery, mounted]);
-// }, [showResults, searchQuery]);
+  // }, [showResults, searchQuery]);
 
-  
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const lat = parseFloat(latitude);
@@ -152,7 +152,7 @@ const Header = ({ onRequestPrediction }: HeaderProps) => {
             </div>
             <div>
               <h1 className="text-sm md:text-lg font-semibold text-slate-900 tracking-tight">
-                Liquefaction Assessment Platform
+                LIQUEFACT
               </h1>
               <p className="text-xs text-slate-500 mt-0.5 hidden sm:block">
                 Geotechnical Risk Analysis System
@@ -179,10 +179,10 @@ const Header = ({ onRequestPrediction }: HeaderProps) => {
               </div>
 
               {/* Search Results Dropdown - Using Portal only when mounted */}
-           {typeof window !== "undefined" &&
-  showResults &&
-  searchResults.length > 0 &&
-  createPortal(
+              {typeof window !== "undefined" &&
+                showResults &&
+                searchResults.length > 0 &&
+                createPortal(
                   <div
                     style={{
                       position: "fixed",

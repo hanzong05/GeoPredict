@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Liquefaction Assessment Platform",
+  title: "LIQUEFACT",
   description: "Geotechnical Risk Analysis System",
 };
 

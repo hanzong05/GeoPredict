@@ -176,7 +176,7 @@ export default function LiquefactionSidebar({
 
     const ExcelJS = (await import("exceljs")).default;
     const wb = new ExcelJS.Workbook();
-    wb.creator = "Liquefaction Assessment Platform";
+    wb.creator = "LIQUEFACT";
     wb.created = new Date();
 
     const riskFill: Record<string, ExcelJS.Fill> = {

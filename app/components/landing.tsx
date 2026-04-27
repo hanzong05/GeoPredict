@@ -154,7 +154,7 @@ export default function Landing({ onRequestPrediction }: LandingProps) {
           <Waves className="text-white" size={36} />
         </div>
         <h1 className="text-3xl md:text-4xl font-bold text-slate-900 tracking-tight text-center">
-          Liquefaction Assessment Platform
+          LIQUEFACT
         </h1>
         <p className="text-slate-500 text-sm md:text-base mt-3 text-center max-w-sm">
           Geotechnical risk analysis for any location. Select a point to begin your soil assessment.
