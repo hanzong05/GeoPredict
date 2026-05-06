@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir:*)",
+      "Bash(cp:*)",
+      "Bash(node:*)",
+      "Bash(npm install:*)",
+      "Bash(cat:*)",
+      "Bash(Get-ChildItem -Recurse -Force)",
+      "Bash(Select-Object FullName)",
+      "Bash(xargs grep -l \"foundation\\\\|settlement\\\\|mitigation\")"
+    ]
+  }
+}
