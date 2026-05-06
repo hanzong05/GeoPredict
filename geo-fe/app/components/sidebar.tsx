@@ -124,8 +124,8 @@ export default function LiquefactionSidebar({
 
   const settlementCm = predictionData?.settlement.settlement_cm ?? 0;
   const settlementMm = (settlementCm * 10).toFixed(1);
-  const lpi = predictionData?.settlement.lpi;
-  const lpiSeverity = predictionData?.settlement.lpi_severity;
+  const lpi = predictionData?.settlement.lpi ?? 0;
+  const lpiSeverity = predictionData?.settlement.lpi_severity ?? "None";
 
   const lpiSeverityColor: Record<string, string> = {
     "None": "text-green-600",
@@ -525,23 +525,11 @@ export default function LiquefactionSidebar({
                   value={settlementMm}
                   unit="mm"
                 />
-                {lpi !== undefined && (
-                  <div className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
-                    <span className="text-xs text-slate-600">
-                      Liquefaction Potential Index (LPI)
-                    </span>
-                    <div className="text-right">
-                      <span className={`text-sm font-bold ${lpiSeverityColor[lpiSeverity ?? "None"] ?? "text-slate-900"}`}>
-                        {lpi.toFixed(2)}
-                      </span>
-                      {lpiSeverity && (
-                        <span className={`text-xs ml-1.5 font-medium ${lpiSeverityColor[lpiSeverity] ?? "text-slate-500"}`}>
-                          ({lpiSeverity})
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                )}
+                <SubRow
+                  label="Liquefaction Potential Index (LPI)"
+                  value={`${lpi.toFixed(2)} (${lpiSeverity})`}
+                  accent={lpiSeverityColor[lpiSeverity] ?? "text-slate-900"}
+                />
               </div>
 
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
