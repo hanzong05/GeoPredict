@@ -27,11 +27,15 @@ export interface PredictionResult {
         latitude: number;
         longitude: number;
         nearest_borehole_distance_km: number;
+        municipality?: string;
     };
     risk_assessment: {
         risk_level: 'VERY LOW' | 'LOW' | 'HIGH' | 'VERY HIGH';
         probability: number;
         severity: string;
+        factor_of_safety?: number;
+        confidence?: string;
+        data_source?: string;
     };
     soil_parameters: {
         spt_n60: number;
@@ -45,10 +49,19 @@ export interface PredictionResult {
     settlement: {
         settlement_cm: number;
         severity: string;
+        lpi?: number;
+        lpi_severity?: string;
     };
     bearing_capacity: {
         allowable_bearing_capacity_kpa: number;
         capacity_reduction_percent: number;
+    };
+    foundation_recommendation?: {
+        base_m: number;
+        depth_m: number;
+        mitigation_required?: boolean;
+        settlement_mm?: number;
+        allowable_settlement_mm?: number;
     };
     recommendations: string[];
 }

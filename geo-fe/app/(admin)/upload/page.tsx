@@ -54,7 +54,6 @@ export default function Page() {
   const [files, setFiles] = useState<FileItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [uploadSuccess, setUploadSuccess] = useState(false);
 
 
   // Check auth on mount
@@ -117,7 +116,6 @@ export default function Page() {
     }
 
     setUploading(true);
-    setUploadSuccess(false);
 
     try {
       const formData = new FormData();
@@ -132,7 +130,6 @@ export default function Page() {
       const data: UploadResponse = await res.json();
 
       if (data.success) {
-        setUploadSuccess(true);
 
         let message = `✅ ${data.message || "Upload successful"}\n\nOriginal file: ${data.originalName || file.name}\nSaved as: Raw_Data.xlsx`;
 
