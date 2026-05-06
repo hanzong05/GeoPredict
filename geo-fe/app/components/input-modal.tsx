@@ -45,13 +45,13 @@ export default function InputModal({ open, onSubmit, onClose }: InputModalProps)
           {/* Building Weight */}
           <div>
             <label className="block text-xs font-medium text-slate-700 mb-1">
-              Building Weight — q actual (kPa)
+              Building Weight — q actual (Kilonewtons)
             </label>
             <input
               type="number"
               min="0"
-              step="0.1"
-              placeholder="e.g. 120.0"
+              step="1"
+              placeholder="e.g. 120"
               value={qActual}
               onChange={(e) => setQActual(e.target.value)}
               className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent"
