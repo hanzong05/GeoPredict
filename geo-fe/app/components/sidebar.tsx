@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import type ExcelJS from "exceljs";
 import {
@@ -97,6 +97,8 @@ export default function LiquefactionSidebar({
   onReinput,
 }: LiquefactionSidebarProps) {
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
 
   const hasValidData =
     predictionData &&
@@ -441,7 +443,7 @@ export default function LiquefactionSidebar({
               <p className="text-xs text-slate-500">
                 {latitude.toFixed(4)}°N, {longitude.toFixed(4)}°E
               </p>
-              {distanceKm && hasValidData && (
+              {mounted && distanceKm && hasValidData && (
                 <p className="text-xs text-slate-400 mt-0.5">
                   {distanceKm.toFixed(2)} km from nearest borehole
                 </p>
@@ -461,7 +463,7 @@ export default function LiquefactionSidebar({
             </button>
           </div>
 
-          {!hasValidData && (
+          {mounted && !hasValidData && (
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <div className="flex items-start gap-3">
                 <IoSearchOutline
@@ -481,7 +483,7 @@ export default function LiquefactionSidebar({
             </div>
           )}
 
-          {hasValidData && (
+          {mounted && hasValidData && (
             <>
               <div
                 className={`${riskColors.bg} ${riskColors.border} border rounded-lg p-4`}

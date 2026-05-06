@@ -102,8 +102,7 @@ export async function predictByLocation(
         const response = await fetch(url, {
             method: 'GET',
             headers: pythonHeaders,
-            // Cache per unique URL (lat/lon/q_actual/magnitude) for 1 hour
-            next: { revalidate: 3600 },
+            cache: 'no-store',
             signal: AbortSignal.timeout(30000), // 30 second timeout
         });
 
