@@ -36,6 +36,8 @@ interface PredictionData {
   settlement: {
     settlement_cm: number;
     severity: string;
+    lpi?: number;
+    lpi_severity?: string;
   };
   bearing_capacity: {
     allowable_bearing_capacity_kpa: number;
