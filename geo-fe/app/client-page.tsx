@@ -132,7 +132,7 @@ export default function ClientPage() {
           magnitude,
         );
         if (result.success && result.data) {
-          setPredictionData(result.data as PredictionData);
+          setPredictionData(result.data as unknown as PredictionData);
           // Reverse geocode only after the user confirms
           handleLocationChange(pendingLocation.lat, pendingLocation.lng);
         }
