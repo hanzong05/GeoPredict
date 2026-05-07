@@ -120,7 +120,7 @@ export default function ClientPage() {
 
   // Called when user submits the input modal
   const handleInputModalSubmit = useCallback(
-    async (qActual: number, magnitude: number) => {
+    async (qActual: number, magnitude: number, depth: number, tYears: number) => {
       if (!pendingLocation) return;
       setShowInputModal(false);
       setIsPredicting(true);
@@ -130,6 +130,8 @@ export default function ClientPage() {
           pendingLocation.lng,
           qActual,
           magnitude,
+          depth,
+          tYears,
         );
         if (result.success && result.data) {
           setPredictionData(result.data as unknown as PredictionData);

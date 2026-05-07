@@ -91,10 +91,14 @@ export async function predictByLocation(
     longitude: number,
     qActual?: number,
     magnitude?: number,
+    depth?: number,
+    tYears?: number,
 ) {
     let url = `${PYTHON_API_URL}/predict-by-location?latitude=${latitude}&longitude=${longitude}`;
     if (qActual !== undefined) url += `&q_actual=${qActual}`;
     if (magnitude !== undefined) url += `&magnitude=${magnitude}`;
+    if (depth !== undefined) url += `&depth=${depth}`;
+    if (tYears !== undefined) url += `&t_years=${tYears}`;
 
     console.log('[Server Action] Fetching prediction from:', url);
 
